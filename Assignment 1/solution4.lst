@@ -1,0 +1,64 @@
+SQL> SET ECHO ON
+SQL> SET FEEDBACK ON
+SQL> SET LINESIZE 300
+SQL> SET PAGESIZE 300
+SQL> 
+SQL> -- Whitney Chng Yia Qing
+SQL> -- 6956865
+SQL> -- Assignment 1 Task 4
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT C_CUSTKEY
+  3  FROM CUSTOMER
+  4  WHERE EXISTS
+  5  (SELECT O_CUSTKEY FROM ORDERS
+  6  WHERE C_CUSTKEY = O_CUSTKEY
+  7  AND C_NAME = 'Golden Bolts'
+  8  AND O_TOTALPRICE > 100)
+  9  INTERSECT
+ 10  SELECT C_CUSTKEY
+ 11  FROM NATION JOIN CUSTOMER
+ 12  ON C_NATIONKEY = N_NATIONKEY
+ 13  WHERE N_REGIONKEY = 1 OR N_REGIONKEY = 2 OR N_REGIONKEY = 3
+ 14  AND C_NATIONKEY >=0;
+
+Explained.
+
+SQL> 
+SQL> 
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1612789643
+ 
+-----------------------------------------------------------------------------------------
+| Id  | Operation            | Name     | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |          |     1 |   263K|       |  3602   (1)| 00:00:01 |
+|   1 |  INTERSECTION        |          |       |       |       |            |          |
+|   2 |   SORT UNIQUE        |          |     1 |    31 |       |  3089   (1)| 00:00:01 |
+|*  3 |    HASH JOIN SEMI    |          |     1 |    31 |       |  3088   (1)| 00:00:01 |
+|*  4 |     TABLE ACCESS FULL| CUSTOMER |     1 |    22 |       |   389   (0)| 00:00:01 |
+|*  5 |     TABLE ACCESS FULL| ORDERS   |   450K|  3955K|       |  2697   (1)| 00:00:01 |
+|   6 |   SORT UNIQUE        |          | 27000 |   263K|   544K|   513   (1)| 00:00:01 |
+|*  7 |    HASH JOIN         |          | 27000 |   263K|       |   402   (1)| 00:00:01 |
+|*  8 |     TABLE ACCESS FULL| NATION   |    15 |    60 |       |    12   (0)| 00:00:01 |
+|*  9 |     TABLE ACCESS FULL| CUSTOMER | 45000 |   263K|       |   390   (1)| 00:00:01 |
+-----------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   3 - access("C_CUSTKEY"="O_CUSTKEY")
+   4 - filter("C_NAME"='Golden Bolts')
+   5 - filter("O_TOTALPRICE">100 AND "O_CUSTKEY">=0)
+   7 - access("C_NATIONKEY"="N_NATIONKEY")
+   8 - filter("NATION"."N_REGIONKEY"=1 OR "NATION"."N_REGIONKEY"=2 OR 
+              "NATION"."N_REGIONKEY"=3)
+   9 - filter("C_NATIONKEY">=0)
+
+27 rows selected. 
+
+SQL> SPOOL OFF

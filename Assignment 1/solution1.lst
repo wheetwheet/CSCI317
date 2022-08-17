@@ -1,0 +1,125 @@
+SQL> SET ECHO ON
+SQL> SET FEEDBACK ON
+SQL> SET LINESIZE 300
+SQL> SET PAGESIZE 300
+SQL> 
+SQL> -- Whitney Chng Yia Qing
+SQL> -- 6956865
+SQL> -- Assignment 1 Task 1
+SQL> 
+SQL> -- (1) 
+SQL> connect system/oracle
+ERROR:
+ORA-28002: the password will expire within 6 days
+
+Connected.
+SQL> 
+SQL> select v$instance.instance_name,
+  2  v$instance.host_name,
+  3  v$instance.startup_time,
+  4  v$instance.database_status
+  5  from v$instance;
+
+INSTANCE_NAME    HOST_NAME                                                        STARTUP_T DATABASE_STATUS  
+---------------- ---------------------------------------------------------------- --------- -----------------
+db               localhost.localdomain                                            20-JUL-22 ACTIVE           
+
+1 row selected. 
+
+SQL> 
+SQL> -- (2)
+SQL> connect tpchr/oracle
+Connected.
+SQL> 
+SQL> analyze table REGION compute statistics;
+
+Table analyzed.
+
+SQL> analyze table NATION compute statistics;
+
+Table analyzed.
+
+SQL> analyze table PART compute statistics;
+
+Table analyzed.
+
+SQL> analyze table SUPPLIER compute statistics;
+
+Table analyzed.
+
+SQL> analyze table PARTSUPP compute statistics;
+
+Table analyzed.
+
+SQL> analyze table CUSTOMER compute statistics;
+
+Table analyzed.
+
+SQL> analyze table ORDERS compute statistics;
+
+Table analyzed.
+
+SQL> analyze table LINEITEM compute statistics;
+
+Table analyzed.
+
+SQL> 
+SQL> -- (3)
+SQL> connect sys/oracle as sysdba
+Connected.
+SQL> 
+SQL> -- (4i)
+SQL> select systimestamp from dual;
+
+SYSTIMESTAMP
+--------------------------------------
+21-JUL-22 10.25.53.680032000 AM -04:00
+
+1 row selected. 
+
+SQL> 
+SQL> -- (4ii)
+SQL> column SEGMENT_NAME format A30
+SQL> 
+SQL> select a.segment_name as table_name,b.num_rows as total_rows, a.blocks as total_blocks, a.extents total_extents, a.bytes as total_bytes
+  2  from dba_segments a, dba_tables b
+  3  where a.SEGMENT_name = b.table_name
+  4  and a.tablespace_name = 'TPCHR';
+
+TABLE_NAME                                                                                                                       TOTAL_ROWS TOTAL_BLOCKS TOTAL_EXTENTS TOTAL_BYTES
+-------------------------------------------------------------------------------------------------------------------------------- ---------- ------------ ------------- -----------
+REGION                                                                                                                                    5           32             1      262144
+NATION                                                                                                                                   25           32             1      262144
+PART                                                                                                                                  60000         1088            34     8912896
+SUPPLIER                                                                                                                               3000           96             3      786432
+PARTSUPP                                                                                                                             240000         5024           157    41156608
+CUSTOMER                                                                                                                              45000         1056            33     8650752
+ORDERS                                                                                                                               450000         7296           228    59768832
+LINEITEM                                                                                                                            1800093        32576          1018   266862592
+
+8 rows selected. 
+
+SQL> 
+SQL> -- (4iii)
+SQL> select a.segment_name as index_name,a.blocks as total_blocks, a.extents total_extents, a.bytes as total_bytes
+  2  from dba_segments a
+  3  where a.segment_name in ('REGION_PKEY','NATION_PKEY','PART_PEKEY','SUPPLIER_PKEY','PARTSUPP_PKEY','CUSTOMER_PKEY','ORDERS_PKEY','LINEITEM_PKEY');
+
+INDEX_NAME                                                                                                                       TOTAL_BLOCKS TOTAL_EXTENTS TOTAL_BYTES
+-------------------------------------------------------------------------------------------------------------------------------- ------------ ------------- -----------
+REGION_PKEY                                                                                                                                32             1      262144
+NATION_PKEY                                                                                                                                32             1      262144
+PART_PEKEY                                                                                                                                160             5     1310720
+SUPPLIER_PKEY                                                                                                                              32             1      262144
+PARTSUPP_PKEY                                                                                                                             896            28     7340032
+CUSTOMER_PKEY                                                                                                                             128             4     1048576
+ORDERS_PKEY                                                                                                                               928            29     7602176
+LINEITEM_PKEY                                                                                                                            4256           133    34865152
+
+8 rows selected. 
+
+SQL> 
+SQL> 
+SQL> 
+SQL> 
+SQL> SPOOL OFF
