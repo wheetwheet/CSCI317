@@ -1,0 +1,629 @@
+SQL> @D:\SIM\UOW\Teaching\SCIT\CSCI317\Tutorial\test2.sql
+SQL> conn isit311/isit311
+Connected.
+SQL> EXPLAIN PLAN FOR
+  2  SELECT P_NAME, PS_AVAILQTY, P_BRAND
+  3  FROM PART JOIN PARTSUPP
+  4  	       ON P_PARTKEY = PS_PARTKEY
+  5  WHERE PS_AVAILQTY > 280 ;
+
+Explained.
+
+SQL> 
+SQL> @D:\SIM\UOW\Teaching\SCIT\CSCI317\Tutorial\showplan
+SQL> SELECT  *
+  2  FROM    TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+Plan hash value: 2659500848                                                     
+                                                                                
+--------------------------------------------------------------------------------
+-------                                                                         
+                                                                                
+| Id  | Operation          | Name     | Rows  | Bytes |TempSpc| Cost (%CPU)| Tim
+e     |                                                                         
+                                                                                
+--------------------------------------------------------------------------------
+-------                                                                         
+                                                                                
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |   233K|    12M|       |  2015   (1)| 00:
+00:25 |                                                                         
+                                                                                
+|*  1 |  HASH JOIN         |          |   233K|    12M|  3520K|  2015   (1)| 00:
+00:25 |                                                                         
+                                                                                
+|   2 |   TABLE ACCESS FULL| PART     | 60000 |  2812K|       |   291   (1)| 00:
+00:04 |                                                                         
+                                                                                
+|*  3 |   TABLE ACCESS FULL| PARTSUPP |   233K|  1594K|       |  1342   (1)| 00:
+00:17 |                                                                         
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+                                                                                
+--------------------------------------------------------------------------------
+-------                                                                         
+                                                                                
+                                                                                
+Predicate Information (identified by operation id):                             
+---------------------------------------------------                             
+                                                                                
+   1 - access("P_PARTKEY"="PS_PARTKEY")                                         
+   3 - filter("PARTSUPP"."PS_AVAILQTY">280)                                     
+
+16 rows selected.
+
+SQL> 
+SQL> set echo on
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_TAX, L_QUANTITY, L_PARTKEY
+  3  FROM LINEITEM
+  4  WHERE L_TAX = 0.2 AND L_DISCOUNT = 0.1 ;
+
+Explained.
+
+SQL> 
+SQL> @D:\SIM\UOW\Teaching\SCIT\CSCI317\Tutorial\showplan
+SQL> SELECT  *
+  2  FROM    TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+Plan hash value: 98068815                                                       
+                                                                                
+------------------------------------------------------------------------------  
+| Id  | Operation         | Name     | Rows  | Bytes | Cost (%CPU)| Time     |  
+------------------------------------------------------------------------------  
+|   0 | SELECT STATEMENT  |          |     1 |    10 |  8784   (1)| 00:01:46 |  
+|*  1 |  TABLE ACCESS FULL| LINEITEM |     1 |    10 |  8784   (1)| 00:01:46 |  
+------------------------------------------------------------------------------  
+                                                                                
+Predicate Information (identified by operation id):                             
+---------------------------------------------------                             
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+                                                                                
+   1 - filter("L_TAX"=0.2 AND "L_DISCOUNT"=0.1)                                 
+
+13 rows selected.
+
+SQL> 
+SQL> set echo on
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT O_CUSTKEY, C_NAME, SUM(O_TOTALPRICE)
+  3  FROM ORDERS JOIN CUSTOMER
+  4  		 ON O_CUSTKEY = C_CUSTKEY
+  5  GROUP BY O_CUSTKEY, C_NAME;
+
+Explained.
+
+SQL> 
+SQL> @D:\SIM\UOW\Teaching\SCIT\CSCI317\Tutorial\showplan
+SQL> SELECT  *
+  2  FROM    TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+Plan hash value: 3806500235                                                     
+                                                                                
+--------------------------------------------------------------------------------
+----------                                                                      
+                                                                                
+| Id  | Operation             | Name     | Rows  | Bytes |TempSpc| Cost (%CPU)| 
+Time     |                                                                      
+                                                                                
+--------------------------------------------------------------------------------
+----------                                                                      
+                                                                                
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |          | 29998 |  1142K|       |  3222   (1)| 
+00:00:39 |                                                                      
+                                                                                
+|   1 |  HASH GROUP BY        |          | 29998 |  1142K|  1424K|  3222   (1)| 
+00:00:39 |                                                                      
+                                                                                
+|*  2 |   HASH JOIN           |          | 29998 |  1142K|       |  2917   (1)| 
+00:00:36 |                                                                      
+                                                                                
+|   3 |    VIEW               | VW_GBC_5 | 29998 |   498K|       |  2634   (1)| 
+00:00:32 |                                                                      
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+                                                                                
+|   4 |     HASH GROUP BY     |          | 29998 |   263K|  8832K|  2634   (1)| 
+00:00:32 |                                                                      
+                                                                                
+|*  5 |      TABLE ACCESS FULL| ORDERS   |   450K|  3955K|       |  1950   (1)| 
+00:00:24 |                                                                      
+                                                                                
+|   6 |    TABLE ACCESS FULL  | CUSTOMER | 45000 |   966K|       |   282   (0)| 
+00:00:04 |                                                                      
+                                                                                
+--------------------------------------------------------------------------------
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+----------                                                                      
+                                                                                
+                                                                                
+Predicate Information (identified by operation id):                             
+---------------------------------------------------                             
+                                                                                
+   2 - access("ITEM_1"="C_CUSTKEY")                                             
+   5 - filter("O_CUSTKEY">=0)                                                   
+
+19 rows selected.
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT C_CUSTKEY, C_NAME, C_ADDRESS
+  3  FROM CUSTOMER
+  4  WHERE C_CUSTKEY NOT IN ( SELECT O_CUSTKEY
+  5  			      FROM ORDERS );
+
+Explained.
+
+SQL> @D:\SIM\UOW\Teaching\SCIT\CSCI317\Tutorial\showplan
+SQL> SELECT  *
+  2  FROM    TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+Plan hash value: 1680953000                                                     
+                                                                                
+--------------------------------------------------------------------------------
+-------                                                                         
+                                                                                
+| Id  | Operation          | Name     | Rows  | Bytes |TempSpc| Cost (%CPU)| Tim
+e     |                                                                         
+                                                                                
+--------------------------------------------------------------------------------
+-------                                                                         
+                                                                                
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          | 15002 |   761K|       |  2703   (1)| 00:
+00:33 |                                                                         
+                                                                                
+|*  1 |  HASH JOIN ANTI    |          | 15002 |   761K|  2640K|  2703   (1)| 00:
+00:33 |                                                                         
+                                                                                
+|   2 |   TABLE ACCESS FULL| CUSTOMER | 45000 |  2109K|       |   282   (0)| 00:
+00:04 |                                                                         
+                                                                                
+|*  3 |   TABLE ACCESS FULL| ORDERS   |   450K|  1757K|       |  1949   (1)| 00:
+00:24 |                                                                         
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+                                                                                
+--------------------------------------------------------------------------------
+-------                                                                         
+                                                                                
+                                                                                
+Predicate Information (identified by operation id):                             
+---------------------------------------------------                             
+                                                                                
+   1 - access("C_CUSTKEY"="O_CUSTKEY")                                          
+   3 - filter("O_CUSTKEY">=0)                                                   
+
+16 rows selected.
+
+SQL> 
+SQL> set echo on
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT P_NAME, S_NAME, S_PHONE
+  3  FROM PART JOIN PARTSUPP
+  4  	       ON P_PARTKEY = PS_PARTKEY
+  5  	       JOIN SUPPLIER
+  6  	       ON S_SUPPKEY = PS_SUPPKEY;
+
+Explained.
+
+SQL> 
+SQL> @D:\SIM\UOW\Teaching\SCIT\CSCI317\Tutorial\showplan
+SQL> SELECT  *
+  2  FROM    TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+Plan hash value: 4257181913                                                     
+                                                                                
+--------------------------------------------------------------------------------
+----------------                                                                
+                                                                                
+| Id  | Operation              | Name          | Rows  | Bytes |TempSpc| Cost (%
+CPU)| Time     |                                                                
+                                                                                
+--------------------------------------------------------------------------------
+----------------                                                                
+                                                                                
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT       |               |   240K|    20M|       |   912  
+ (1)| 00:00:11 |                                                                
+                                                                                
+|*  1 |  HASH JOIN             |               |   240K|    20M|       |   912  
+ (1)| 00:00:11 |                                                                
+                                                                                
+|   2 |   TABLE ACCESS FULL    | SUPPLIER      |  3000 |   125K|       |    25  
+ (0)| 00:00:01 |                                                                
+                                                                                
+|*  3 |   HASH JOIN            |               |   240K|    10M|  2936K|   886  
+ (1)| 00:00:11 |                                                                
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+                                                                                
+|   4 |    TABLE ACCESS FULL   | PART          | 60000 |  2226K|       |   290  
+ (0)| 00:00:04 |                                                                
+                                                                                
+|*  5 |    INDEX FAST FULL SCAN| PARTSUPP_PKEY |   240K|  1640K|       |   235  
+ (1)| 00:00:03 |                                                                
+                                                                                
+--------------------------------------------------------------------------------
+----------------                                                                
+                                                                                
+                                                                                
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+Predicate Information (identified by operation id):                             
+---------------------------------------------------                             
+                                                                                
+   1 - access("S_SUPPKEY"="PARTSUPP"."PS_SUPPKEY")                              
+   3 - access("P_PARTKEY"="PS_PARTKEY")                                         
+   5 - filter("PARTSUPP"."PS_SUPPKEY">=0)                                       
+
+19 rows selected.
+
+SQL> 
+SQL> -- Create the requuired indexes
+SQL> CREATE INDEX IDX1 ON PARTSUPP(PS_AVAILQTY,PS_PARTKEY);
+
+Index created.
+
+SQL> CREATE INDEX IDX2 ON  LINEITEM(L_TAX,L_DISCOUNT,L_QUANTITY,L_PARTKEY);
+
+Index created.
+
+SQL> CREATE INDEX IDX3 ON ORDERS(O_CUSTKEY,O_TOTALPRICE);
+
+Index created.
+
+SQL> CREATE INDEX IDX4 ON ORDERS(O_CUSTKEY);
+
+Index created.
+
+SQL> CREATE INDEX IDX5 ON PART(P_PARTKEY,P_NAME);
+
+Index created.
+
+SQL> 
+SQL> --
+SQL> EXPLAIN PLAN FOR
+  2  SELECT P_NAME, PS_AVAILQTY, P_BRAND
+  3  FROM PART JOIN PARTSUPP
+  4  	       ON P_PARTKEY = PS_PARTKEY
+  5  WHERE PS_AVAILQTY > 280 ;
+
+Explained.
+
+SQL> 
+SQL> @D:\SIM\UOW\Teaching\SCIT\CSCI317\Tutorial\showplan
+SQL> SELECT  *
+  2  FROM    TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+Plan hash value: 3740608523                                                     
+                                                                                
+--------------------------------------------------------------------------------
+------                                                                          
+                                                                                
+| Id  | Operation             | Name | Rows  | Bytes |TempSpc| Cost (%CPU)| Time
+     |                                                                          
+                                                                                
+--------------------------------------------------------------------------------
+------                                                                          
+                                                                                
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |      |   233K|    12M|       |   856   (1)| 00:0
+0:11 |                                                                          
+                                                                                
+|*  1 |  HASH JOIN            |      |   233K|    12M|  3520K|   856   (1)| 00:0
+0:11 |                                                                          
+                                                                                
+|   2 |   TABLE ACCESS FULL   | PART | 60000 |  2812K|       |   291   (1)| 00:0
+0:04 |                                                                          
+                                                                                
+|*  3 |   INDEX FAST FULL SCAN| IDX1 |   233K|  1594K|       |   182   (1)| 00:0
+0:03 |                                                                          
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+                                                                                
+--------------------------------------------------------------------------------
+------                                                                          
+                                                                                
+                                                                                
+Predicate Information (identified by operation id):                             
+---------------------------------------------------                             
+                                                                                
+   1 - access("P_PARTKEY"="PS_PARTKEY")                                         
+   3 - filter("PARTSUPP"."PS_AVAILQTY">280)                                     
+
+16 rows selected.
+
+SQL> 
+SQL> set echo on
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_TAX, L_QUANTITY, L_PARTKEY
+  3  FROM LINEITEM
+  4  WHERE L_TAX = 0.2 AND L_DISCOUNT = 0.1 ;
+
+Explained.
+
+SQL> 
+SQL> @D:\SIM\UOW\Teaching\SCIT\CSCI317\Tutorial\showplan
+SQL> SELECT  *
+  2  FROM    TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+Plan hash value: 606941478                                                      
+                                                                                
+-------------------------------------------------------------------------       
+| Id  | Operation        | Name | Rows  | Bytes | Cost (%CPU)| Time     |       
+-------------------------------------------------------------------------       
+|   0 | SELECT STATEMENT |      |     1 |    10 |     3   (0)| 00:00:01 |       
+|*  1 |  INDEX RANGE SCAN| IDX2 |     1 |    10 |     3   (0)| 00:00:01 |       
+-------------------------------------------------------------------------       
+                                                                                
+Predicate Information (identified by operation id):                             
+---------------------------------------------------                             
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+                                                                                
+   1 - access("L_TAX"=0.2 AND "L_DISCOUNT"=0.1)                                 
+
+13 rows selected.
+
+SQL> 
+SQL> set echo on
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT O_CUSTKEY, C_NAME, SUM(O_TOTALPRICE)
+  3  FROM ORDERS JOIN CUSTOMER
+  4  		 ON O_CUSTKEY = C_CUSTKEY
+  5  GROUP BY O_CUSTKEY, C_NAME;
+
+Explained.
+
+SQL> 
+SQL> @D:\SIM\UOW\Teaching\SCIT\CSCI317\Tutorial\showplan
+SQL> SELECT  *
+  2  FROM    TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+Plan hash value: 1589546478                                                     
+                                                                                
+--------------------------------------------------------------------------------
+-------------                                                                   
+                                                                                
+| Id  | Operation                | Name     | Rows  | Bytes |TempSpc| Cost (%CPU
+)| Time     |                                                                   
+                                                                                
+--------------------------------------------------------------------------------
+-------------                                                                   
+                                                                                
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT         |          | 29998 |  1142K|       |  1645   (2
+)| 00:00:20 |                                                                   
+                                                                                
+|   1 |  HASH GROUP BY           |          | 29998 |  1142K|  1424K|  1645   (2
+)| 00:00:20 |                                                                   
+                                                                                
+|*  2 |   HASH JOIN              |          | 29998 |  1142K|       |  1341   (2
+)| 00:00:17 |                                                                   
+                                                                                
+|   3 |    VIEW                  | VW_GBC_5 | 29998 |   498K|       |  1057   (2
+)| 00:00:13 |                                                                   
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+                                                                                
+|   4 |     HASH GROUP BY        |          | 29998 |   263K|  8832K|  1057   (2
+)| 00:00:13 |                                                                   
+                                                                                
+|*  5 |      INDEX FAST FULL SCAN| IDX3     |   450K|  3955K|       |   373   (1
+)| 00:00:05 |                                                                   
+                                                                                
+|   6 |    TABLE ACCESS FULL     | CUSTOMER | 45000 |   966K|       |   282   (0
+)| 00:00:04 |                                                                   
+                                                                                
+--------------------------------------------------------------------------------
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+-------------                                                                   
+                                                                                
+                                                                                
+Predicate Information (identified by operation id):                             
+---------------------------------------------------                             
+                                                                                
+   2 - access("ITEM_1"="C_CUSTKEY")                                             
+   5 - filter("O_CUSTKEY">=0)                                                   
+
+19 rows selected.
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT C_CUSTKEY, C_NAME, C_ADDRESS
+  3  FROM CUSTOMER
+  4  WHERE C_CUSTKEY NOT IN ( SELECT O_CUSTKEY
+  5  			      FROM ORDERS );
+
+Explained.
+
+SQL> @D:\SIM\UOW\Teaching\SCIT\CSCI317\Tutorial\showplan
+SQL> SELECT  *
+  2  FROM    TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+Plan hash value: 2497542184                                                     
+                                                                                
+--------------------------------------------------------------------------------
+----------                                                                      
+                                                                                
+| Id  | Operation             | Name     | Rows  | Bytes |TempSpc| Cost (%CPU)| 
+Time     |                                                                      
+                                                                                
+--------------------------------------------------------------------------------
+----------                                                                      
+                                                                                
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |          | 15002 |   761K|       |  1026   (1)| 
+00:00:13 |                                                                      
+                                                                                
+|*  1 |  HASH JOIN ANTI       |          | 15002 |   761K|  2640K|  1026   (1)| 
+00:00:13 |                                                                      
+                                                                                
+|   2 |   TABLE ACCESS FULL   | CUSTOMER | 45000 |  2109K|       |   282   (0)| 
+00:00:04 |                                                                      
+                                                                                
+|*  3 |   INDEX FAST FULL SCAN| IDX4     |   450K|  1757K|       |   272   (1)| 
+00:00:04 |                                                                      
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+                                                                                
+--------------------------------------------------------------------------------
+----------                                                                      
+                                                                                
+                                                                                
+Predicate Information (identified by operation id):                             
+---------------------------------------------------                             
+                                                                                
+   1 - access("C_CUSTKEY"="O_CUSTKEY")                                          
+   3 - filter("O_CUSTKEY">=0)                                                   
+
+16 rows selected.
+
+SQL> 
+SQL> set echo on
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT P_NAME, S_NAME, S_PHONE
+  3  FROM PART JOIN PARTSUPP
+  4  	       ON P_PARTKEY = PS_PARTKEY
+  5  	       JOIN SUPPLIER
+  6  	       ON S_SUPPKEY = PS_SUPPKEY;
+
+Explained.
+
+SQL> 
+SQL> @D:\SIM\UOW\Teaching\SCIT\CSCI317\Tutorial\showplan
+SQL> SELECT  *
+  2  FROM    TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+Plan hash value: 2735915440                                                     
+                                                                                
+--------------------------------------------------------------------------------
+----------------                                                                
+                                                                                
+| Id  | Operation              | Name          | Rows  | Bytes |TempSpc| Cost (%
+CPU)| Time     |                                                                
+                                                                                
+--------------------------------------------------------------------------------
+----------------                                                                
+                                                                                
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT       |               |   240K|    20M|       |   737  
+ (1)| 00:00:09 |                                                                
+                                                                                
+|*  1 |  HASH JOIN             |               |   240K|    20M|       |   737  
+ (1)| 00:00:09 |                                                                
+                                                                                
+|   2 |   TABLE ACCESS FULL    | SUPPLIER      |  3000 |   125K|       |    25  
+ (0)| 00:00:01 |                                                                
+                                                                                
+|*  3 |   HASH JOIN            |               |   240K|    10M|  2936K|   711  
+ (1)| 00:00:09 |                                                                
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+                                                                                
+|   4 |    INDEX FAST FULL SCAN| IDX5          | 60000 |  2226K|       |   115  
+ (0)| 00:00:02 |                                                                
+                                                                                
+|*  5 |    INDEX FAST FULL SCAN| PARTSUPP_PKEY |   240K|  1640K|       |   235  
+ (1)| 00:00:03 |                                                                
+                                                                                
+--------------------------------------------------------------------------------
+----------------                                                                
+                                                                                
+                                                                                
+
+PLAN_TABLE_OUTPUT                                                               
+--------------------------------------------------------------------------------
+Predicate Information (identified by operation id):                             
+---------------------------------------------------                             
+                                                                                
+   1 - access("S_SUPPKEY"="PARTSUPP"."PS_SUPPKEY")                              
+   3 - access("P_PARTKEY"="PS_PARTKEY")                                         
+   5 - filter("PARTSUPP"."PS_SUPPKEY">=0)                                       
+
+19 rows selected.
+
+SQL> 
+SQL> 
+SQL> -- Clean up
+SQL> DROP INDEX IDX1;
+
+Index dropped.
+
+SQL> DROP INDEX IDX2;
+
+Index dropped.
+
+SQL> DROP INDEX IDX3;
+
+Index dropped.
+
+SQL> DROP INDEX IDX4;
+
+Index dropped.
+
+SQL> DROP INDEX IDX5;
+
+Index dropped.
+
+SQL> spool off
