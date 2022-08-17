@@ -1,0 +1,138 @@
+SQL> SET ECHO ON
+SQL> SET FEEDBACK ON
+SQL> SET LINESIZE 300
+SQL> SET PAGESIZE 300
+SQL> 
+SQL> -- Whitney Chng Yia Qing
+SQL> -- 6956865
+SQL> -- Assignment 2 Task 1
+SQL> 
+SQL> connect sys/oracle as sysdba
+Connected.
+SQL> -- (1)
+SQL> 
+SQL> SELECT SEGMENT_NAME, SUM(BYTES) TOTAL_BYTES, SUM(BLOCKS) TOTAL_BLOCKS
+  2  FROM SYS.DBA_EXTENTS
+  3  WHERE SEGMENT_NAME in ('ORDERS','LINEITEM')
+  4  GROUP BY SEGMENT_NAME, BLOCKS;
+
+SEGMENT_NAME                                                                                                                     TOTAL_BYTES TOTAL_BLOCKS
+-------------------------------------------------------------------------------------------------------------------------------- ----------- ------------
+LINEITEM                                                                                                                           266862592        32576
+ORDERS                                                                                                                              59768832         7296
+
+2 rows selected. 
+
+SQL> 
+SQL> -- (2) TABLESPACE SIZE = 326MB
+SQL> CREATE TABLESPACE TBS_TASK1
+  2  EXTENT MANAGEMENT LOCAL UNIFORM SIZE 256K
+  3  SEGMENT SPACE MANAGEMENT AUTO
+  4  BLOCKSIZE 8K
+  5  DATAFILE '/home/oracle/TPCHR/TBS_TASK1.dbf'
+  6  SIZE 327M AUTOEXTEND ON;
+
+Tablespace created.
+
+SQL> 
+SQL> ALTER USER TPCHR QUOTA 400M ON TBS_TASK1;
+
+User altered.
+
+SQL> 
+SQL> connect tpchr/oracle
+Connected.
+SQL> -- (3)
+SQL> CREATE TABLE ORDERS1992(
+  2  O_ORDERKEY	NUMBER(12)	NOT NULL,
+  3  O_CUSTKEY	NUMBER(12)	NOT NULL,
+  4  O_TOTALPRICE	NUMBER(12,2)	NOT NULL,
+  5  O_ORDERDATE	DATE		NOT NULL,
+  6  	CONSTRAINT ORDERS_PKEY1992 PRIMARY KEY (O_ORDERKEY),
+  7  	CONSTRAINT ORDER_CHECK1992 CHECK( O_TOTALPRICE >= 0))
+  8  pctfree 0 TABLESPACE TBS_TASK1;
+
+Table created.
+
+SQL> 
+SQL> CREATE TABLE LINEITEM1992(
+  2  L_ORDERKEY 	NUMBER(12)	NOT NULL,
+  3  L_LINENUMBER	NUMBER(12)	NOT NULL,
+  4  L_QUANTITY	NUMBER(12,2)	NOT NULL,
+  5  L_EXTENDEDPRICE NUMBER(12,2)	NOT NULL,
+  6  L_DISCOUNT	NUMBER(12,2)	NOT NULL,
+  7  L_TAX		NUMBER(12,2)	NOT NULL,
+  8  L_SHIPDATE	DATE		NOT NULL,
+  9  	CONSTRAINT LINEITEM_PKEY1992 PRIMARY KEY (L_ORDERKEY, L_LINENUMBER),
+ 10  	CONSTRAINT LINEITEM_FKEY1992 FOREIGN KEY (L_ORDERKEY)
+ 11  	REFERENCES ORDERS1992(O_ORDERKEY),
+ 12  	CONSTRAINT LINEITEM_CHECK5 CHECK (L_QUANTITY >= 0),
+ 13  	CONSTRAINT LINEITEM_CHECK6 CHECK (L_EXTENDEDPRICE >= 0),
+ 14  	CONSTRAINT LINEITEM_CHECK7 CHECK (L_TAX >= 0),
+ 15  	CONSTRAINT LINEITEM_CHECK8 CHECK (L_DISCOUNT BETWEEN 0.00 AND 1.00))
+ 16  pctfree 0 TABLESPACE TBS_TASK1;
+
+Table created.
+
+SQL> 
+SQL> 
+SQL> --(4)
+SQL> INSERT INTO ORDERS1992(
+  2  SELECT O_ORDERKEY, O_CUSTKEY, O_TOTALPRICE, O_ORDERDATE
+  3  FROM ORDERS
+  4  WHERE TO_CHAR(O_ORDERDATE, 'yyyy') = '1992');
+
+68291 rows created.
+
+SQL> 
+SQL> INSERT INTO LINEITEM1992(
+  2  SELECT L_ORDERKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_SHIPDATE
+  3  FROM LINEITEM 
+  4  JOIN ORDERS1992
+  5  ON LINEITEM.L_ORDERKEY = ORDERS1992.O_ORDERKEY);
+
+273313 rows created.
+
+SQL> 
+SQL> -- (5)
+SQL> ALTER TABLE ORDERS1992 DEALLOCATE UNUSED;
+
+Table altered.
+
+SQL> ALTER TABLE LINEITEM1992 DEALLOCATE UNUSED;
+
+Table altered.
+
+SQL> 
+SQL> 
+SQL> -- (6)
+SQL> ANALYZE TABLE ORDERS1992 compute statistics;
+
+Table analyzed.
+
+SQL> ANALYZE TABLE LINEITEM1992 compute statistics;
+
+Table analyzed.
+
+SQL> 
+SQL> connect sys/oracle as sysdba;
+Connected.
+SQL> SELECT SEGMENT_NAME, SUM(BYTES) TOTAL_BYTES, SUM(BLOCKS) TOTAL_BLOCKS
+  2  FROM SYS.DBA_EXTENTS
+  3  WHERE SEGMENT_NAME in ('ORDERS1992','LINEITEM1992')
+  4  GROUP BY SEGMENT_NAME, BLOCKS;
+
+SEGMENT_NAME                                                                                                                     TOTAL_BYTES TOTAL_BLOCKS
+-------------------------------------------------------------------------------------------------------------------------------- ----------- ------------
+ORDERS1992                                                                                                                           2359296          288
+LINEITEM1992                                                                                                                        10485760         1280
+
+2 rows selected. 
+
+SQL> 
+SQL> DROP TABLESPACE TBS_TASK1 INCLUDING CONTENTS AND DATAFILES;
+
+Tablespace dropped.
+
+SQL> 
+SQL> SPOOL off

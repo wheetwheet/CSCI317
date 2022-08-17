@@ -1,0 +1,491 @@
+SQL> SET ECHO ON
+SQL> SET FEEDBACK ON
+SQL> SET LINESIZE 300
+SQL> SET PAGESIZE 300
+SQL> 
+SQL> -- Whitney Chng Yia Qing
+SQL> -- 6956865
+SQL> -- Assignment 2 Task 4
+SQL> 
+SQL> conn tpchr/oracle
+Connected.
+SQL> 
+SQL> 
+SQL> -- Original Queries
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT(DISTINCT O_TOTALPRICE)
+  3  FROM ORDERS;
+
+Explained.
+
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2012224683
+ 
+---------------------------------------------------------------------------------
+| Id  | Operation            | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |          |     1 |    13 |  2708   (1)| 00:00:01 |
+|   1 |  SORT AGGREGATE      |          |     1 |    13 |            |          |
+|   2 |   VIEW               | VW_DAG_0 |   472K|  6004K|  2708   (1)| 00:00:01 |
+|   3 |    HASH GROUP BY     |          |   472K|  6004K|  2708   (1)| 00:00:01 |
+|   4 |     TABLE ACCESS FULL| ORDERS   |   472K|  6004K|  2696   (1)| 00:00:01 |
+---------------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+15 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT *
+  3  FROM CUSTOMER JOIN ORDERS
+  4  ON CUSTOMER.C_CUSTKEY = ORDERS.O_CUSTKEY
+  5  WHERE C_ACCTBAL = 1000 AND O_TOTALPRICE = 1000;
+
+Explained.
+
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3409376518
+ 
+----------------------------------------------------------------------------------------------
+| Id  | Operation                    | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT             |               |    11 |  3333 |  2933   (1)| 00:00:01 |
+|   1 |  NESTED LOOPS                |               |    11 |  3333 |  2933   (1)| 00:00:01 |
+|   2 |   NESTED LOOPS               |               |   236 |  3333 |  2933   (1)| 00:00:01 |
+|*  3 |    TABLE ACCESS FULL         | ORDERS        |   236 | 32804 |  2697   (1)| 00:00:01 |
+|*  4 |    INDEX UNIQUE SCAN         | CUSTOMER_PKEY |     1 |       |     0   (0)| 00:00:01 |
+|*  5 |   TABLE ACCESS BY INDEX ROWID| CUSTOMER      |     1 |   164 |     1   (0)| 00:00:01 |
+----------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   3 - filter("ORDERS"."O_TOTALPRICE"=1000 AND "ORDERS"."O_CUSTKEY">=0)
+   4 - access("CUSTOMER"."C_CUSTKEY"="ORDERS"."O_CUSTKEY")
+   5 - filter("CUSTOMER"."C_ACCTBAL"=1000)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+   - this is an adaptive plan
+
+24 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT *
+  3  FROM ORDERS JOIN LINEITEM
+  4  ON ORDERS.O_ORDERKEY = LINEITEM.L_ORDERKEY
+  5  WHERE O_ORDERDATE = '09-SEP-2021' OR L_QUANTITY = 500;
+
+Explained.
+
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1168254961
+ 
+--------------------------------------------------------------------------------------------------
+| Id  | Operation                      | Name            | Rows  | Bytes | Cost (%CPU)| Time     |
+--------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT               |                 |   117K|    37M| 17199   (1)| 00:00:01 |
+|   1 |  VIEW                          | VW_ORE_28A0B32A |   117K|    37M| 17199   (1)| 00:00:01 |
+|   2 |   UNION-ALL                    |                 |       |       |            |          |
+|   3 |    NESTED LOOPS                |                 |   117K|    37M|  3240   (1)| 00:00:01 |
+|   4 |     NESTED LOOPS               |                 |   117K|    37M|  3240   (1)| 00:00:01 |
+|*  5 |      TABLE ACCESS FULL         | ORDERS          |    79 | 10981 |  2697   (1)| 00:00:01 |
+|*  6 |      INDEX RANGE SCAN          | LINEITEM_PKEY   |  1484 |       |     4   (0)| 00:00:01 |
+|   7 |     TABLE ACCESS BY INDEX ROWID| LINEITEM        |  1484 |   289K|   231   (0)| 00:00:01 |
+|   8 |    NESTED LOOPS                |                 |   397 |   131K| 13959   (1)| 00:00:01 |
+|   9 |     NESTED LOOPS               |                 |   397 |   131K| 13959   (1)| 00:00:01 |
+|* 10 |      TABLE ACCESS FULL         | LINEITEM        |   397 | 79400 | 13562   (1)| 00:00:01 |
+|* 11 |      INDEX UNIQUE SCAN         | ORDERS_PKEY     |     1 |       |     0   (0)| 00:00:01 |
+|* 12 |     TABLE ACCESS BY INDEX ROWID| ORDERS          |     1 |   139 |     1   (0)| 00:00:01 |
+--------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   5 - filter("ORDERS"."O_ORDERDATE"=TO_DATE(' 2021-09-09 00:00:00', 'syyyy-mm-dd 
+              hh24:mi:ss'))
+   6 - access("ORDERS"."O_ORDERKEY"="LINEITEM"."L_ORDERKEY")
+  10 - filter("LINEITEM"."L_QUANTITY"=500)
+  11 - access("ORDERS"."O_ORDERKEY"="LINEITEM"."L_ORDERKEY")
+  12 - filter(LNNVL("ORDERS"."O_ORDERDATE"=TO_DATE(' 2021-09-09 00:00:00', 'syyyy-mm-dd 
+              hh24:mi:ss')))
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+   - this is an adaptive plan
+
+35 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT *
+  3  FROM LINEITEM JOIN PART
+  4  ON LINEITEM.L_PARTKEY = PART.P_PARTKEY
+  5  WHERE L_QUANTITY = 100 AND P_NAME = 'bolt';
+
+Explained.
+
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3666964389
+ 
+-------------------------------------------------------------------------------
+| Id  | Operation          | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |    12 |  3996 | 13963   (1)| 00:00:01 |
+|*  1 |  HASH JOIN         |          |    12 |  3996 | 13963   (1)| 00:00:01 |
+|*  2 |   TABLE ACCESS FULL| PART     |    12 |  1596 |   401   (1)| 00:00:01 |
+|*  3 |   TABLE ACCESS FULL| LINEITEM |   946 |   184K| 13562   (1)| 00:00:01 |
+-------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - access("LINEITEM"."L_PARTKEY"="PART"."P_PARTKEY")
+   2 - filter("PART"."P_NAME"='bolt')
+   3 - filter("LINEITEM"."L_QUANTITY"=100 AND "LINEITEM"."L_PARTKEY">=0)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+21 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT(PS_AVAILQTY)
+  3  FROM PARTSUPP JOIN LINEITEM
+  4  ON PARTSUPP.PS_PARTKEY = LINEITEM.L_PARTKEY
+  5  JOIN ORDERS
+  6  ON LINEITEM.L_ORDERKEY = ORDERS.O_ORDERKEY
+  7  WHERE O_ORDERSTATUS = 'F' AND L_QUANTITY >200 AND PS_SUPPLYCOST >100;
+
+Explained.
+
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3874550376
+ 
+-------------------------------------------------------------------------------------------------
+| Id  | Operation                       | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                |               |     1 |    81 | 15071   (1)| 00:00:01 |
+|   1 |  SORT AGGREGATE                 |               |     1 |    81 |            |          |
+|   2 |   NESTED LOOPS                  |               |   102K|  8087K| 15071   (1)| 00:00:01 |
+|   3 |    NESTED LOOPS                 |               |   113K|  8087K| 15071   (1)| 00:00:01 |
+|   4 |     NESTED LOOPS                |               |   397 | 21835 | 13959   (1)| 00:00:01 |
+|*  5 |      TABLE ACCESS FULL          | LINEITEM      |   397 | 15483 | 13562   (1)| 00:00:01 |
+|*  6 |      TABLE ACCESS BY INDEX ROWID| ORDERS        |     1 |    16 |     1   (0)| 00:00:01 |
+|*  7 |       INDEX UNIQUE SCAN         | ORDERS_PKEY   |     1 |       |     0   (0)| 00:00:01 |
+|*  8 |     INDEX RANGE SCAN            | PARTSUPP_PKEY |   287 |       |     2   (0)| 00:00:01 |
+|*  9 |    TABLE ACCESS BY INDEX ROWID  | PARTSUPP      |   257 |  6682 |    52   (0)| 00:00:01 |
+-------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   5 - filter("LINEITEM"."L_QUANTITY">200 AND "LINEITEM"."L_PARTKEY">=0)
+   6 - filter("ORDERS"."O_ORDERSTATUS"='F')
+   7 - access("LINEITEM"."L_ORDERKEY"="ORDERS"."O_ORDERKEY")
+   8 - access("PARTSUPP"."PS_PARTKEY"="LINEITEM"."L_PARTKEY")
+   9 - filter("PARTSUPP"."PS_SUPPLYCOST">100)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+   - this is an adaptive plan
+
+30 rows selected. 
+
+SQL> 
+SQL> /* Potential Indexes
+SQL>CREATE INDEX order_index ON ORDERS(O_TOTALPRICE, O_ORDERDATE, O_ORDERSTATUS);
+SQL>CREATE INDEX cust_index ON CUSTOMER(C_ACCTBAL);
+SQL>CREATE INDEX part_index ON PART(P_NAME);
+SQL>CREATE INDEX lineitem_index ON LINEITEM(L_QUANTITY);
+SQL>CREATE INDEX partsupp_index ON PARTSUPP(PS_SUPPLYCOS,PS_AVAILQTY);*/
+SQL> 
+SQL> -- (2)
+SQL> -- Smallest No. of Index Found
+SQL> CREATE INDEX order_index ON ORDERS(O_TOTALPRICE, O_ORDERDATE, O_ORDERSTATUS);
+
+Index created.
+
+SQL> CREATE INDEX lineitem_index ON LINEITEM(L_QUANTITY);
+
+Index created.
+
+SQL> 
+SQL> -- Size of Indexes
+SQL> connect sys/oracle as sysdba
+Connected.
+SQL> 
+SQL> SELECT SEGMENT_NAME, SEGMENT_TYPE, BYTES, BLOCKS
+  2  FROM DBA_SEGMENTS
+  3  WHERE SEGMENT_NAME in ('order_index','lineitem_index');
+
+0 rows selected. 
+
+SQL> 
+SQL> -- (3) Query Processing Plan
+SQL> 
+SQL> -- Improved Queries
+SQL> connect tpchr/oracle
+Connected.
+SQL> -- Query 1
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT(DISTINCT O_TOTALPRICE)
+  3  FROM ORDERS;
+
+Explained.
+
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2412058460
+ 
+---------------------------------------------------------------------------------------
+| Id  | Operation               | Name        | Rows  | Bytes | Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT        |             |     1 |    13 |   665   (3)| 00:00:01 |
+|   1 |  SORT AGGREGATE         |             |     1 |    13 |            |          |
+|   2 |   VIEW                  | VW_DAG_0    |   472K|  6004K|   665   (3)| 00:00:01 |
+|   3 |    HASH GROUP BY        |             |   472K|  6004K|   665   (3)| 00:00:01 |
+|   4 |     INDEX FAST FULL SCAN| ORDER_INDEX |   472K|  6004K|   653   (1)| 00:00:01 |
+---------------------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+15 rows selected. 
+
+SQL> 
+SQL> -- Query 2
+SQL> EXPLAIN PLAN FOR
+  2  SELECT *
+  3  FROM CUSTOMER JOIN ORDERS
+  4  ON CUSTOMER.C_CUSTKEY = ORDERS.O_CUSTKEY
+  5  WHERE C_ACCTBAL = 1000 AND O_TOTALPRICE = 1000;
+
+Explained.
+
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1536872459
+ 
+-------------------------------------------------------------------------------------------------------
+| Id  | Operation                             | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                      |               |    11 |  3333 |   315   (0)| 00:00:01 |
+|   1 |  NESTED LOOPS                         |               |    11 |  3333 |   315   (0)| 00:00:01 |
+|   2 |   NESTED LOOPS                        |               |   236 |  3333 |   315   (0)| 00:00:01 |
+|*  3 |    TABLE ACCESS BY INDEX ROWID BATCHED| ORDERS        |   236 | 32804 |    79   (0)| 00:00:01 |
+|*  4 |     INDEX RANGE SCAN                  | ORDER_INDEX   |    79 |       |     3   (0)| 00:00:01 |
+|*  5 |    INDEX UNIQUE SCAN                  | CUSTOMER_PKEY |     1 |       |     0   (0)| 00:00:01 |
+|*  6 |   TABLE ACCESS BY INDEX ROWID         | CUSTOMER      |     1 |   164 |     1   (0)| 00:00:01 |
+-------------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   3 - filter("ORDERS"."O_CUSTKEY">=0)
+   4 - access("ORDERS"."O_TOTALPRICE"=1000)
+   5 - access("CUSTOMER"."C_CUSTKEY"="ORDERS"."O_CUSTKEY")
+   6 - filter("CUSTOMER"."C_ACCTBAL"=1000)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+   - this is an adaptive plan
+
+26 rows selected. 
+
+SQL> 
+SQL> -- Query 3
+SQL> EXPLAIN PLAN FOR
+  2  SELECT *
+  3  FROM ORDERS JOIN LINEITEM
+  4  ON ORDERS.O_ORDERKEY = LINEITEM.L_ORDERKEY
+  5  WHERE O_ORDERDATE = '09-SEP-2021' OR L_QUANTITY = 500;
+
+Explained.
+
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2375106089
+ 
+-----------------------------------------------------------------------------------------------------------
+| Id  | Operation                               | Name            | Rows  | Bytes | Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                        |                 |   117K|    37M|  3243   (1)| 00:00:01 |
+|   1 |  VIEW                                   | VW_ORE_28A0B32A |   117K|    37M|  3243   (1)| 00:00:01 |
+|   2 |   UNION-ALL                             |                 |       |       |            |          |
+|   3 |    NESTED LOOPS                         |                 |   117K|    37M|  3240   (1)| 00:00:01 |
+|   4 |     NESTED LOOPS                        |                 |   117K|    37M|  3240   (1)| 00:00:01 |
+|*  5 |      TABLE ACCESS FULL                  | ORDERS          |    79 | 10981 |  2697   (1)| 00:00:01 |
+|*  6 |      INDEX RANGE SCAN                   | LINEITEM_PKEY   |  1484 |       |     4   (0)| 00:00:01 |
+|   7 |     TABLE ACCESS BY INDEX ROWID         | LINEITEM        |  1484 |   289K|   231   (0)| 00:00:01 |
+|   8 |    NESTED LOOPS                         |                 |     1 |   339 |     3   (0)| 00:00:01 |
+|   9 |     NESTED LOOPS                        |                 |     1 |   339 |     3   (0)| 00:00:01 |
+|  10 |      TABLE ACCESS BY INDEX ROWID BATCHED| LINEITEM        |     1 |   200 |     2   (0)| 00:00:01 |
+|* 11 |       INDEX RANGE SCAN                  | LINEITEM_INDEX  |     1 |       |     2   (0)| 00:00:01 |
+|* 12 |      INDEX UNIQUE SCAN                  | ORDERS_PKEY     |     1 |       |     0   (0)| 00:00:01 |
+|* 13 |     TABLE ACCESS BY INDEX ROWID         | ORDERS          |     1 |   139 |     1   (0)| 00:00:01 |
+-----------------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   5 - filter("ORDERS"."O_ORDERDATE"=TO_DATE(' 2021-09-09 00:00:00', 'syyyy-mm-dd hh24:mi:ss'))
+   6 - access("ORDERS"."O_ORDERKEY"="LINEITEM"."L_ORDERKEY")
+  11 - access("LINEITEM"."L_QUANTITY"=500)
+  12 - access("ORDERS"."O_ORDERKEY"="LINEITEM"."L_ORDERKEY")
+  13 - filter(LNNVL("ORDERS"."O_ORDERDATE"=TO_DATE(' 2021-09-09 00:00:00', 'syyyy-mm-dd 
+              hh24:mi:ss')))
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+   - this is an adaptive plan
+
+35 rows selected. 
+
+SQL> 
+SQL> -- Query 4
+SQL> EXPLAIN PLAN FOR
+  2  SELECT *
+  3  FROM LINEITEM JOIN PART
+  4  ON LINEITEM.L_PARTKEY = PART.P_PARTKEY
+  5  WHERE L_QUANTITY = 100 AND P_NAME = 'bolt';
+
+Explained.
+
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3087648042
+ 
+-------------------------------------------------------------------------------------------------------
+| Id  | Operation                            | Name           | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                     |                |    12 |  3996 |   634   (1)| 00:00:01 |
+|*  1 |  HASH JOIN                           |                |    12 |  3996 |   634   (1)| 00:00:01 |
+|*  2 |   TABLE ACCESS FULL                  | PART           |    12 |  1596 |   401   (1)| 00:00:01 |
+|*  3 |   TABLE ACCESS BY INDEX ROWID BATCHED| LINEITEM       |   946 |   184K|   233   (0)| 00:00:01 |
+|*  4 |    INDEX RANGE SCAN                  | LINEITEM_INDEX |   397 |       |     3   (0)| 00:00:01 |
+-------------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - access("LINEITEM"."L_PARTKEY"="PART"."P_PARTKEY")
+   2 - filter("PART"."P_NAME"='bolt')
+   3 - filter("LINEITEM"."L_PARTKEY">=0)
+   4 - access("LINEITEM"."L_QUANTITY"=100)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+   - this is an adaptive plan
+
+24 rows selected. 
+
+SQL> 
+SQL> -- Query 5
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT(PS_AVAILQTY)
+  3  FROM PARTSUPP JOIN LINEITEM
+  4  ON PARTSUPP.PS_PARTKEY = LINEITEM.L_PARTKEY
+  5  JOIN ORDERS
+  6  ON LINEITEM.L_ORDERKEY = ORDERS.O_ORDERKEY
+  7  WHERE O_ORDERSTATUS = 'F' AND L_QUANTITY >200 AND PS_SUPPLYCOST >100;
+
+Explained.
+
+SQL> @showplan.sql
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3049325757
+ 
+----------------------------------------------------------------------------------------------------------
+| Id  | Operation                               | Name           | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                        |                |     1 |    81 |  1741   (0)| 00:00:01 |
+|   1 |  SORT AGGREGATE                         |                |     1 |    81 |            |          |
+|   2 |   NESTED LOOPS                          |                |   102K|  8087K|  1741   (0)| 00:00:01 |
+|   3 |    NESTED LOOPS                         |                |   113K|  8087K|  1741   (0)| 00:00:01 |
+|   4 |     NESTED LOOPS                        |                |   397 | 21835 |   630   (0)| 00:00:01 |
+|*  5 |      TABLE ACCESS BY INDEX ROWID BATCHED| LINEITEM       |   397 | 15483 |   233   (0)| 00:00:01 |
+|*  6 |       INDEX RANGE SCAN                  | LINEITEM_INDEX |   397 |       |     3   (0)| 00:00:01 |
+|*  7 |      TABLE ACCESS BY INDEX ROWID        | ORDERS         |     1 |    16 |     1   (0)| 00:00:01 |
+|*  8 |       INDEX UNIQUE SCAN                 | ORDERS_PKEY    |     1 |       |     0   (0)| 00:00:01 |
+|*  9 |     INDEX RANGE SCAN                    | PARTSUPP_PKEY  |   287 |       |     2   (0)| 00:00:01 |
+|* 10 |    TABLE ACCESS BY INDEX ROWID          | PARTSUPP       |   257 |  6682 |    52   (0)| 00:00:01 |
+----------------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   5 - filter("LINEITEM"."L_PARTKEY">=0)
+   6 - access("LINEITEM"."L_QUANTITY">200)
+   7 - filter("ORDERS"."O_ORDERSTATUS"='F')
+   8 - access("LINEITEM"."L_ORDERKEY"="ORDERS"."O_ORDERKEY")
+   9 - access("PARTSUPP"."PS_PARTKEY"="LINEITEM"."L_PARTKEY")
+  10 - filter("PARTSUPP"."PS_SUPPLYCOST">100)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+   - this is an adaptive plan
+
+32 rows selected. 
+
+SQL> 
+SQL> -- (4) Drop Indexes
+SQL> DROP INDEX order_index;
+
+Index dropped.
+
+SQL> DROP INDEX lineitem_index;
+
+Index dropped.
+
+SQL> 
+SQL> SPOOL OFF
