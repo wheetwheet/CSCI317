@@ -1,0 +1,255 @@
+SQL> 
+SQL> SET ECHO ON
+SQL> SET FEEDBACK ON
+SQL> SET LINESIZE 300
+SQL> SET PAGESIZE 300
+SQL> 
+SQL> -- Whitney Chng Yia Qing
+SQL> -- 6956865
+SQL> -- Assignment 3 Task 2
+SQL> 
+SQL> connect tpchr/oracle
+Connected.
+SQL> 
+SQL> -- 1 Find all information about the items included in the orders and such that shipment of each item happened on a given day.
+SQL> 
+SQL> EXPLAIN PLAN  FOR
+  2  SELECT * 
+  3  FROM LINEITEM
+  4  WHERE L_SHIPDATE = TO_DATE('01-SEP-1992','DD-MON-YYYY');
+
+Explained.
+
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 98068815
+ 
+------------------------------------------------------------------------------
+| Id  | Operation         | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT  |          |   713 | 89125 | 12155   (1)| 00:00:01 |
+|*  1 |  TABLE ACCESS FULL| LINEITEM |   713 | 89125 | 12155   (1)| 00:00:01 |
+------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter("L_SHIPDATE"=TO_DATE(' 1992-09-01 00:00:00', 'syyyy-mm-dd 
+              hh24:mi:ss'))
+
+14 rows selected. 
+
+SQL> 
+SQL> -- 2 Create partition table PLINEITEM
+SQL> 
+SQL> CREATE TABLE PLINEITEM(
+  2  L_ORDERKEY 	NUMBER(12)	NOT NULL,
+  3  L_PARTKEY	NUMBER(12)	NOT NULL,
+  4  L_SUPPKEY	NUMBER(12)	NOT NULL,
+  5  L_LINENUMBER	NUMBER(12)	NOT NULL,
+  6  L_QUANTITY	NUMBER(12,2)	NOT NULL,
+  7  L_EXTENDEDPRICE NUMBER(12,2)	NOT NULL,
+  8  L_DISCOUNT	NUMBER(12,2)	NOT NULL,
+  9  L_TAX		NUMBER(12,2)	NOT NULL,
+ 10  L_RETURNFLAG	CHAR(1)		NOT NULL,
+ 11  L_LINESTATUS	CHAR(1)		NOT NULL,
+ 12  L_SHIPDATE	DATE		NOT NULL,
+ 13  L_COMMITDATE	DATE		NOT NULL,
+ 14  L_RECEIPTDATE	DATE		NOT NULL,
+ 15  L_SHIPINSTRUCT	CHAR(25)	NOT NULL,
+ 16  L_SHIPMODE	CHAR(10)	NOT NULL,
+ 17  L_COMMENT	VARCHAR(44)	NOT NULL,
+ 18  	CONSTRAINT PLINEITEM_PKEY PRIMARY KEY (L_ORDERKEY, L_LINENUMBER),
+ 19  	CONSTRAINT PLINEITEM_FKEY1 FOREIGN kEY (L_ORDERKEY)
+ 20  		REFERENCES ORDERS(O_ORDERKEY),
+ 21  	CONSTRAINT PLINEITEM_FKEY2 FOREIGN KEY (L_PARTKEY)
+ 22  		REFERENCES PART(P_PARTKEY),
+ 23  	CONSTRAINT PLINEITEM_FKEY3 FOREIGN KEY (L_PARTKEY,L_SUPPKEY)
+ 24  		REFERENCES PARTSUPP(PS_PARTKEY, PS_SUPPKEY),
+ 25  	CONSTRAINT PLINEITEM_FKEY4 FOREIGN kEY (L_SUPPKEY)
+ 26  		REFERENCES SUPPLIER(S_SUPPKEY),
+ 27  	CONSTRAINT PLINEITEM_CHECK1 CHECK (L_QUANTITY >= 0),
+ 28  	CONSTRAINT PLINEITEM_CHECK2 CHECK (L_EXTENDEDPRICE >= 0),
+ 29  	CONSTRAINT PLINEITEM_CHECK3 CHECK (L_TAX >= 0),
+ 30  	CONSTRAINT PLINEITEM_CHECK4 CHECK (L_DISCOUNT BETWEEN 0.00 AND 1.00))
+ 31  PARTITION BY RANGE(L_SHIPDATE)
+ 32  	(PARTITION P92 VALUES LESS THAN (TO_DATE('31-DEC-1992','DD-MON-YYYY') ),
+ 33  	PARTITION P93 VALUES LESS THAN (TO_DATE('31-DEC-1993','DD-MON-YYYY') ),
+ 34  	PARTITION P94 VALUES LESS THAN (TO_DATE('31-DEC-1994','DD-MON-YYYY') ),
+ 35  	PARTITION P95 VALUES LESS THAN (TO_DATE('31-DEC-1995','DD-MON-YYYY') ),
+ 36  	PARTITION P96 VALUES LESS THAN (TO_DATE('31-DEC-1996','DD-MON-YYYY') ),
+ 37  	PARTITION P97 VALUES LESS THAN (TO_DATE('31-DEC-1997','DD-MON-YYYY') ),
+ 38  	PARTITION P98 VALUES LESS THAN (TO_DATE('31-DEC-1998','DD-MON-YYYY') ),
+ 39  	PARTITION P99 VALUES LESS THAN (TO_DATE('31-DEC-1999','DD-MON-YYYY') ));
+
+Table created.
+
+SQL> 
+SQL> INSERT INTO PLINEITEM (SELECT * FROM LINEITEM);
+
+1800093 rows created.
+
+SQL> COMMIT;
+
+Commit complete.
+
+SQL> 
+SQL> -- 3 Processing Plan PLINEITEM
+SQL> EXPLAIN PLAN  FOR
+  2  SELECT * 
+  3  FROM PLINEITEM
+  4  PARTITION(P92)
+  5  WHERE L_SHIPDATE = TO_DATE('01-SEP-1992','DD-MON-YYYY');
+
+Explained.
+
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3501312265
+ 
+----------------------------------------------------------------------------------------------------
+| Id  | Operation              | Name      | Rows  | Bytes | Cost (%CPU)| Time     | Pstart| Pstop |
+----------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT       |           |   454 | 90800 |  1611   (5)| 00:00:01 |       |       |
+|   1 |  PARTITION RANGE SINGLE|           |   454 | 90800 |  1611   (5)| 00:00:01 |     1 |     1 |
+|*  2 |   TABLE ACCESS FULL    | PLINEITEM |   454 | 90800 |  1611   (5)| 00:00:01 |     1 |     1 |
+----------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - filter("L_SHIPDATE"=TO_DATE(' 1992-09-01 00:00:00', 'syyyy-mm-dd hh24:mi:ss'))
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+18 rows selected. 
+
+SQL> 
+SQL> -- 4 Global Partitioned Index
+SQL> CREATE INDEX GlobalIdx ON PLINEITEM(L_SHIPDATE)
+  2  GLOBAL PARTITION BY RANGE(L_SHIPDATE)(
+  3  	PARTITION P92 VALUES LESS THAN (TO_DATE('31-DEC-1992', 'DD-MON-YYYY')),
+  4  	PARTITION P93 VALUES LESS THAN (TO_DATE('31-DEC-1993', 'DD-MON-YYYY')),
+  5  	PARTITION P94 VALUES LESS THAN (TO_DATE('31-DEC-1994', 'DD-MON-YYYY')),
+  6  	PARTITION P95 VALUES LESS THAN (TO_DATE('31-DEC-1995', 'DD-MON-YYYY')),
+  7  	PARTITION P96 VALUES LESS THAN (TO_DATE('31-DEC-1996', 'DD-MON-YYYY')),
+  8  	PARTITION P97 VALUES LESS THAN (TO_DATE('31-DEC-1997', 'DD-MON-YYYY')),
+  9  	PARTITION P98 VALUES LESS THAN (TO_DATE('31-DEC-1998', 'DD-MON-YYYY')),
+ 10  	PARTITION P99 VALUES LESS THAN (MAXVALUE));
+
+Index created.
+
+SQL> 
+SQL> -- 5 Processing Plan with Global Index
+SQL> EXPLAIN PLAN FOR
+  2  SELECT * 
+  3  FROM PLINEITEM
+  4  PARTITION (P92)
+  5  WHERE L_SHIPDATE = TO_DATE('01-SEP-1992','DD-MON-YYYY');
+
+Explained.
+
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 467206995
+ 
+-------------------------------------------------------------------------------------------------------------------------
+| Id  | Operation                                   | Name      | Rows  | Bytes | Cost (%CPU)| Time     | Pstart| Pstop |
+-------------------------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                            |           |   733 |   143K|   167   (0)| 00:00:01 |       |       |
+|   1 |  PARTITION RANGE SINGLE                     |           |   733 |   143K|   167   (0)| 00:00:01 |     1 |     1 |
+|   2 |   TABLE ACCESS BY GLOBAL INDEX ROWID BATCHED| PLINEITEM |   733 |   143K|   167   (0)| 00:00:01 |     1 |     1 |
+|*  3 |    INDEX RANGE SCAN                         | GLOBALIDX |   733 |       |    28   (0)| 00:00:01 |     1 |     1 |
+-------------------------------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   3 - access("L_SHIPDATE"=TO_DATE(' 1992-09-01 00:00:00', 'syyyy-mm-dd hh24:mi:ss'))
+       filter(TBL$OR$IDX$PART$NUM("PLINEITEM",0,1,0,ROWID)=1)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+20 rows selected. 
+
+SQL> 
+SQL> -- 6 Drop Global Partition Index
+SQL> DROP INDEX GlobalIdx;
+
+Index dropped.
+
+SQL> 
+SQL> -- 6 Local Partition Index
+SQL> CREATE INDEX LocalIdx ON PLINEITEM(L_SHIPDATE) LOCAL
+  2  (PARTITION P92,
+  3  PARTITION P93,
+  4  PARTITION P94,
+  5  PARTITION P95,
+  6  PARTITION P96,
+  7  PARTITION P97,
+  8  PARTITION P98,
+  9  PARTITION P99);
+
+Index created.
+
+SQL> 
+SQL> -- 7 Processing Plan Local Index
+SQL> EXPLAIN PLAN FOR
+  2  SELECT * 
+  3  FROM PLINEITEM PARTITION (P92)
+  4  WHERE L_SHIPDATE = TO_DATE('01-SEP-1992','DD-MON-YYYY');
+
+Explained.
+
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1771295233
+ 
+------------------------------------------------------------------------------------------------------------------------
+| Id  | Operation                                  | Name      | Rows  | Bytes | Cost (%CPU)| Time     | Pstart| Pstop |
+------------------------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                           |           |   733 |   143K|   901   (0)| 00:00:01 |       |       |
+|   1 |  PARTITION RANGE SINGLE                    |           |   733 |   143K|   901   (0)| 00:00:01 |     1 |     1 |
+|   2 |   TABLE ACCESS BY LOCAL INDEX ROWID BATCHED| PLINEITEM |   733 |   143K|   901   (0)| 00:00:01 |     1 |     1 |
+|*  3 |    INDEX RANGE SCAN                        | LOCALIDX  |   733 |       |    23   (0)| 00:00:01 |     1 |     1 |
+------------------------------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   3 - access("L_SHIPDATE"=TO_DATE(' 1992-09-01 00:00:00', 'syyyy-mm-dd hh24:mi:ss'))
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+19 rows selected. 
+
+SQL> 
+SQL> -- 8 Drop PLINEITEM and Local Index
+SQL> DROP INDEX LocalIdx;
+
+Index dropped.
+
+SQL> DROP TABLE PLINEITEM PURGE;
+
+Table dropped.
+
+SQL> 
+SQL> SPOOL OFF

@@ -1,0 +1,283 @@
+SQL> 
+SQL> SET ECHO ON
+SQL> SET FEEDBACK ON
+SQL> SET LINESIZE 300
+SQL> SET PAGESIZE 300
+SQL> 
+SQL> -- Whitney Chng Yia Qing
+SQL> -- 6956865
+SQL> -- Assignment 3 Task 4
+SQL> 
+SQL> connect system/oracle
+Connected.
+SQL> 
+SQL> ALTER SYSTEM SET OPTIMIZER_MODE=ALL_ROWS;
+
+System altered.
+
+SQL> ALTER SYSTEM SET QUERY_REWRITE_ENABLED=TRUE;
+
+System altered.
+
+SQL> ALTER SYSTEM SET QUERY_REWRITE_INTEGRITY=ENFORCED;
+
+System altered.
+
+SQL> GRANT CREATE MATERIALIZED VIEW TO TPCHR;
+
+Grant succeeded.
+
+SQL> GRANT QUERY REWRITE TO TPCHR;
+
+Grant succeeded.
+
+SQL> GRANT CREATE ANY TABLE TO TPCHR;
+
+Grant succeeded.
+
+SQL> 
+SQL> connect tpchr/oracle
+Connected.
+SQL> 
+SQL> -- 1 Processing Plans
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_PARTKEY, L_TAX, COUNT(*)
+  3  FROM LINEITEM
+  4  GROUP BY L_PARTKEY,L_TAX;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1773397105
+ 
+---------------------------------------------------------------------------------------
+| Id  | Operation          | Name     | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |   384K|  3005K|       | 15363   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY     |          |   384K|  3005K|    27M| 15363   (1)| 00:00:01 |
+|   2 |   TABLE ACCESS FULL| LINEITEM |  1800K|    13M|       | 12150   (1)| 00:00:01 |
+---------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT O_TOTALPRICE, COUNT(*)
+  3  FROM ORDERS
+  4  GROUP BY O_TOTALPRICE;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2183589723
+ 
+-------------------------------------------------------------------------------------
+| Id  | Operation          | Name   | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |        |   448K|  2628K|       |  4152   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY     |        |   448K|  2628K|  5304K|  4152   (1)| 00:00:01 |
+|   2 |   TABLE ACCESS FULL| ORDERS |   450K|  2636K|       |  2696   (1)| 00:00:01 |
+-------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_TAX, L_QUANTITY, COUNT(*)
+  3  FROM LINEITEM
+  4  GROUP BY L_TAX, L_QUANTITY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1773397105
+ 
+-------------------------------------------------------------------------------
+| Id  | Operation          | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |   319 |  1914 | 12196   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY     |          |   319 |  1914 | 12196   (1)| 00:00:01 |
+|   2 |   TABLE ACCESS FULL| LINEITEM |  1800K|    10M| 12150   (1)| 00:00:01 |
+-------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT O_CLERK, O_TOTALPRICE, COUNT(*)
+  3  FROM ORDERS
+  4  GROUP BY O_CLERK, O_TOTALPRICE;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2183589723
+ 
+-------------------------------------------------------------------------------------
+| Id  | Operation          | Name   | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |        |   450K|  9667K|       |  5684   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY     |        |   450K|  9667K|    13M|  5684   (1)| 00:00:01 |
+|   2 |   TABLE ACCESS FULL| ORDERS |   450K|  9667K|       |  2697   (1)| 00:00:01 |
+-------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> -- 2 Materialized Views
+SQL> 
+SQL> CREATE MATERIALIZED VIEW MV1
+  2  ENABLE QUERY REWRITE AS
+  3  (SELECT O_CLERK, O_TOTALPRICE, COUNT(*)
+  4  FROM ORDERS
+  5  GROUP BY O_CLERK, O_TOTALPRICE);
+
+Materialized view created.
+
+SQL> 
+SQL> CREATE MATERIALIZED VIEW MV2
+  2  ENABLE QUERY REWRITE AS
+  3  (SELECT L_TAX, L_QUANTITY, L_PARTKEY, COUNT(*)
+  4  FROM LINEITEM
+  5  GROUP BY L_TAX, L_QUANTITY, L_PARTKEY);
+
+Materialized view created.
+
+SQL> 
+SQL> -- 3 Processing Plans improved
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_PARTKEY, L_TAX, COUNT(*)
+  3  FROM LINEITEM
+  4  GROUP BY L_PARTKEY,L_TAX;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3129989290
+ 
+----------------------------------------------------------------------------------------------
+| Id  | Operation                     | Name | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT              |      |   384K|  4132K|       |  5522   (2)| 00:00:01 |
+|   1 |  HASH GROUP BY                |      |   384K|  4132K|    40M|  5522   (2)| 00:00:01 |
+|   2 |   MAT_VIEW REWRITE ACCESS FULL| MV2  |  1742K|    18M|       |  1734   (1)| 00:00:01 |
+----------------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT O_TOTALPRICE, COUNT(*)
+  3  FROM ORDERS
+  4  GROUP BY O_TOTALPRICE;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1771842424
+ 
+----------------------------------------------------------------------------------------------
+| Id  | Operation                     | Name | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT              |      |   448K|  3943K|       |  2428   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY                |      |   448K|  3943K|  8832K|  2428   (1)| 00:00:01 |
+|   2 |   MAT_VIEW REWRITE ACCESS FULL| MV1  |   449K|  3955K|       |   719   (1)| 00:00:01 |
+----------------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_TAX, L_QUANTITY, COUNT(*)
+  3  FROM LINEITEM
+  4  GROUP BY L_TAX, L_QUANTITY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3129989290
+ 
+--------------------------------------------------------------------------------------
+| Id  | Operation                     | Name | Rows  | Bytes | Cost (%CPU)| Time     |
+--------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT              |      |   319 |  2871 |  1778   (4)| 00:00:01 |
+|   1 |  HASH GROUP BY                |      |   319 |  2871 |  1778   (4)| 00:00:01 |
+|   2 |   MAT_VIEW REWRITE ACCESS FULL| MV2  |  1742K|    14M|  1734   (1)| 00:00:01 |
+--------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT O_CLERK, O_TOTALPRICE, COUNT(*)
+  3  FROM ORDERS
+  4  GROUP BY O_CLERK, O_TOTALPRICE;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2958490228
+ 
+-------------------------------------------------------------------------------------
+| Id  | Operation                    | Name | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT             |      |   449K|    10M|   719   (1)| 00:00:01 |
+|   1 |  MAT_VIEW REWRITE ACCESS FULL| MV1  |   449K|    10M|   719   (1)| 00:00:01 |
+-------------------------------------------------------------------------------------
+
+8 rows selected. 
+
+SQL> 
+SQL> -- Drop Materialized Views
+SQL> DROP MATERIALIZED VIEW MV1;
+
+Materialized view dropped.
+
+SQL> DROP MATERIALIZED VIEW MV2;
+
+Materialized view dropped.
+
+SQL> 
+SQL> SPOOL OFF
