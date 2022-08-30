@@ -1,0 +1,278 @@
+SQL> set feedback on
+SQL> set linesize 300
+SQL> set pagesize 500
+SQL> 
+SQL> /* Implement SQL script solution4.sql that performs the following actions.
+SQL>
+SQL>(1) First, the script finds and lists a query processing plan for SELECT statement given above.
+SQL>    It is recommended to record the estimated values of query processing costs listed at the top
+SQL>    of Cost column of query processing plan.                                                             */
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_ORDERKEY, COUNT(*) TOT
+  3  FROM LINEITEM
+  4  WHERE L_QUANTITY = 50 AND L_DISCOUNT = 0.2
+  5  GROUP BY L_ORDERKEY
+  6  HAVING COUNT(*) > 1
+  7  ORDER BY L_ORDERKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 119192358
+ 
+-------------------------------------------------------------------------------
+| Id  | Operation          | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |     1 |     9 | 12153   (1)| 00:00:01 |
+|*  1 |  SORT GROUP BY     |          |     1 |     9 | 12153   (1)| 00:00:01 |
+|*  2 |   TABLE ACCESS FULL| LINEITEM |     1 |     9 | 12152   (1)| 00:00:01 |
+-------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter(COUNT(*)>1)
+   2 - filter("L_DISCOUNT"=0.2 AND "L_QUANTITY"=50)
+
+15 rows selected. 
+
+SQL> 
+SQL> /* (2) Next, the script creates an index based on the single column. The index must improve performance 
+SQL>       of query processing in the best way for any single column key index.                              */
+SQL> 
+SQL> CREATE INDEX IDX1 ON LINEITEM(L_DISCOUNT);
+
+Index created.
+
+SQL> 
+SQL> /* (3) Next, the script finds a query processing plan for SELECT statement give above.  You can use 
+SQL>       a value listed in a column Cost of query processing plan as a measure of improvement in query 
+SQL>       processing with an index.                                                                         */
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_ORDERKEY, COUNT(*) TOT
+  3  FROM LINEITEM
+  4  WHERE L_QUANTITY = 50 AND L_DISCOUNT = 0.2
+  5  GROUP BY L_ORDERKEY
+  6  HAVING COUNT(*) > 1
+  7  ORDER BY L_ORDERKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 760062402
+ 
+-------------------------------------------------------------------------------------------------
+| Id  | Operation                            | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                     |          |     1 |     9 |     5  (20)| 00:00:01 |
+|*  1 |  SORT GROUP BY                       |          |     1 |     9 |     5  (20)| 00:00:01 |
+|*  2 |   TABLE ACCESS BY INDEX ROWID BATCHED| LINEITEM |     1 |     9 |     4   (0)| 00:00:01 |
+|*  3 |    INDEX RANGE SCAN                  | IDX1     |     1 |       |     3   (0)| 00:00:01 |
+-------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter(COUNT(*)>1)
+   2 - filter("L_QUANTITY"=50)
+   3 - access("L_DISCOUNT"=0.2)
+
+17 rows selected. 
+
+SQL> 
+SQL> /* (4) Next, the script drops an index created in a step (2).                                            */
+SQL> 
+SQL> DROP INDEX IDX1;
+
+Index dropped.
+
+SQL> 
+SQL> /* (5) Next, the script creates an index based on two columns (composite index key), that improves 
+SQL>       performance of query processing in the best way for any index created over two columns.           */
+SQL> 
+SQL> CREATE INDEX IDX5 ON LINEITEM(L_DISCOUNT,L_QUANTITY);
+
+Index created.
+
+SQL> 
+SQL> /* (6) Next, the script finds a query processing plan for SELECT statement give above.  You can use 
+SQL>       a value listed in a column Cost of query processing plan as a measure of improvement in query 
+SQL>       processing with an index.                                                                         */
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_ORDERKEY, COUNT(*) TOT
+  3  FROM LINEITEM
+  4  WHERE L_QUANTITY = 50 AND L_DISCOUNT = 0.2
+  5  GROUP BY L_ORDERKEY
+  6  HAVING COUNT(*) > 1
+  7  ORDER BY L_ORDERKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2698462883
+ 
+-------------------------------------------------------------------------------------------------
+| Id  | Operation                            | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                     |          |     1 |     9 |     5  (20)| 00:00:01 |
+|*  1 |  SORT GROUP BY                       |          |     1 |     9 |     5  (20)| 00:00:01 |
+|   2 |   TABLE ACCESS BY INDEX ROWID BATCHED| LINEITEM |     1 |     9 |     4   (0)| 00:00:01 |
+|*  3 |    INDEX RANGE SCAN                  | IDX5     |     1 |       |     3   (0)| 00:00:01 |
+-------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter(COUNT(*)>1)
+   3 - access("L_DISCOUNT"=0.2 AND "L_QUANTITY"=50)
+
+16 rows selected. 
+
+SQL> 
+SQL> /* (7) Next, the script drops an index created in a step (5).                                            */
+SQL> 
+SQL> 
+SQL> DROP INDEX IDX5;
+
+Index dropped.
+
+SQL> 
+SQL> /* (8) Next, the script creates two single column indexes, that improve performance of query processing 
+SQL>       in the best way for any two single column indexes.                                                */
+SQL> 
+SQL> CREATE INDEX IDX8_1 ON LINEITEM(L_DISCOUNT);
+
+Index created.
+
+SQL> CREATE INDEX IDX8_2 ON LINEITEM(L_QUANTITY);
+
+Index created.
+
+SQL> 
+SQL> 
+SQL> /* (9) Next, the script finds a query processing plan for SELECT statement give above.  You can use 
+SQL>       a value listed in a column Cost of query processing plan as a measure of improvement in query 
+SQL>       processing with the indexes.                                                                      */
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_ORDERKEY, COUNT(*) TOT
+  3  FROM LINEITEM
+  4  WHERE L_QUANTITY = 50 AND L_DISCOUNT = 0.2
+  5  GROUP BY L_ORDERKEY
+  6  HAVING COUNT(*) > 1
+  7  ORDER BY L_ORDERKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2055195497
+ 
+-------------------------------------------------------------------------------------------------
+| Id  | Operation                            | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                     |          |     1 |     9 |     5  (20)| 00:00:01 |
+|*  1 |  SORT GROUP BY                       |          |     1 |     9 |     5  (20)| 00:00:01 |
+|*  2 |   TABLE ACCESS BY INDEX ROWID BATCHED| LINEITEM |     1 |     9 |     4   (0)| 00:00:01 |
+|*  3 |    INDEX RANGE SCAN                  | IDX8_1   |     1 |       |     3   (0)| 00:00:01 |
+-------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter(COUNT(*)>1)
+   2 - filter("L_QUANTITY"=50)
+   3 - access("L_DISCOUNT"=0.2)
+
+17 rows selected. 
+
+SQL> 
+SQL> /* (10)Next, the script drops the indexes created in a step (8).                                         */
+SQL> 
+SQL> DROP INDEX IDX8_1;
+
+Index dropped.
+
+SQL> DROP INDEX IDX8_2;
+
+Index dropped.
+
+SQL> 
+SQL> /* (11)Now, assume that we have enough persistent storage to create a single index on any number of 
+SQL>       columns as long as such index improves performance of query processing in the best way. Create 
+SQL>       an index on any number of columns, that improves performance of query processing in the best way. */
+SQL> 
+SQL> CREATE INDEX IDX11 ON LINEITEM(L_DISCOUNT,L_QUANTITY,L_ORDERKEY);
+
+Index created.
+
+SQL> 
+SQL> /* (12)Next, the script finds a query processing plan for SELECT statement give above.  You can use 
+SQL>       a value listed in a column Cost of query processing plan as a measure of improvement in query 
+SQL>       processing with an index.                                                                         */
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_ORDERKEY, COUNT(*) TOT
+  3  FROM LINEITEM
+  4  WHERE L_QUANTITY = 50 AND L_DISCOUNT = 0.2
+  5  GROUP BY L_ORDERKEY
+  6  HAVING COUNT(*) > 1
+  7  ORDER BY L_ORDERKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2656935521
+ 
+------------------------------------------------------------------------------
+| Id  | Operation            | Name  | Rows  | Bytes | Cost (%CPU)| Time     |
+------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |       |     1 |     9 |     3   (0)| 00:00:01 |
+|*  1 |  SORT GROUP BY NOSORT|       |     1 |     9 |     3   (0)| 00:00:01 |
+|*  2 |   INDEX RANGE SCAN   | IDX11 |     1 |     9 |     3   (0)| 00:00:01 |
+------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter(COUNT(*)>1)
+   2 - access("L_DISCOUNT"=0.2 AND "L_QUANTITY"=50)
+
+15 rows selected. 
+
+SQL> 
+SQL> /* (13)Next, the script drops the indexes created in a step (11).                                        */
+SQL> 
+SQL> DROP INDEX IDX11;
+
+Index dropped.
+
+SQL> 
+SQL> spool off

@@ -1,0 +1,161 @@
+SQL> set feedback on
+SQL> 
+SQL> /* (1) First, the script finds the total number of physical and logical read block operations 
+SQL>       performed by a query implemented in a script file task1.sql.                               */
+SQL> 
+SQL> connect system/oracle
+Connected.
+SQL> 
+SQL> CREATE TABLE OPSTAT_TABLE(
+  2  OWNER		VARCHAR(30)	NOT NULL,
+  3  OBJECT_NAME	VARCHAR(30)	NOT NULL,
+  4  STATISTIC_NAME	VARCHAR(64)	NOT NULL,
+  5  VALUE		NUMBER		NOT NULL,
+  6  TS		TIMESTAMP	NOT NULL,
+  7    CONSTRAINT OPSTAT_TABLE_PKEY 
+  8  	PRIMARY KEY(TS,OWNER,OBJECT_NAME,STATISTIC_NAME) );
+
+Table created.
+
+SQL> 
+SQL> INSERT INTO OPSTAT_TABLE (
+  2          SELECT OWNER,
+  3                 OBJECT_NAME,
+  4                 STATISTIC_NAME,
+  5                 VALUE,
+  6                 SYSTIMESTAMP
+  7          FROM   V$SEGMENT_STATISTICS
+  8          WHERE  OWNER = 'TPCHR' AND
+  9                 STATISTIC_NAME IN ('physical reads', 'logical reads') );
+
+0 rows created.
+
+SQL> 
+SQL> connect tpchr/oracle
+Connected.
+SQL> 
+SQL> SELECT COUNT(*)
+  2  FROM ( (SELECT *
+  3         FROM LINEITEM
+  4         WHERE L_SHIPDATE >= '01-JAN-1992' AND
+  5               L_SHIPDATE <= '31-AUG-1992'
+  6         INTERSECT
+  7         SELECT *
+  8         FROM LINEITEM
+  9         WHERE L_SHIPDATE >= '01-APR-1992' AND
+ 10               L_SHIPDATE <= '30-APR-1993')
+ 11         UNION
+ 12        (SELECT *
+ 13         FROM LINEITEM
+ 14         WHERE L_SHIPDATE >= '01-JAN-1993' AND
+ 15               L_SHIPDATE <= '31-AUG-1993'
+ 16         INTERSECT
+ 17         SELECT *
+ 18         FROM LINEITEM
+ 19         WHERE L_SHIPDATE >= '01-APR-1992' AND
+ 20               L_SHIPDATE <= '30-APR-1993') );
+
+  COUNT(*)
+----------
+    200962
+
+1 row selected. 
+
+SQL> 
+SQL> connect system/oracle
+Connected.
+SQL> 
+SQL> column OWNER FORMAT A10
+SQL> column OBJECT_NAME FORMAT A20
+SQL> column STATISTIC_NAME  FORMAT A30
+SQL> 
+SQL> SELECT V$SEGMENT_STATISTICS.OWNER,
+  2         V$SEGMENT_STATISTICS.OBJECT_NAME,
+  3         V$SEGMENT_STATISTICS.STATISTIC_NAME,
+  4         V$SEGMENT_STATISTICS.VALUE - NVL(OPSTAT_TABLE.VALUE,0) INCR
+  5  FROM   V$SEGMENT_STATISTICS LEFT OUTER JOIN OPSTAT_TABLE
+  6                              ON V$SEGMENT_STATISTICS.OWNER = OPSTAT_TABLE.OWNER AND
+  7                                 V$SEGMENT_STATISTICS.OBJECT_NAME = OPSTAT_TABLE.OBJECT_NAME AND
+  8                                 V$SEGMENT_STATISTICS.STATISTIC_NAME = OPSTAT_TABLE.STATISTIC_NAME
+  9  WHERE  V$SEGMENT_STATISTICS.OWNER = 'TPCHR' AND
+ 10        ( V$SEGMENT_STATISTICS.VALUE - NVL(OPSTAT_TABLE.VALUE,0) ) <> 0 AND
+ 11        V$SEGMENT_STATISTICS.OBJECT_NAME <> 'PLAN_TABLE' AND
+ 12        V$SEGMENT_STATISTICS.STATISTIC_NAME IN ('physical reads', 'logical reads')
+ 13  ORDER BY V$SEGMENT_STATISTICS.OBJECT_NAME, V$SEGMENT_STATISTICS.STATISTIC_NAME;
+
+OWNER      OBJECT_NAME          STATISTIC_NAME                       INCR
+---------- -------------------- ------------------------------ ----------
+TPCHR      LINEITEM             logical reads                      129472
+TPCHR      LINEITEM             physical reads                     129379
+
+2 rows selected. 
+
+SQL> 
+SQL> TRUNCATE TABLE OPSTAT_TABLE;
+
+Table truncated.
+
+SQL> 
+SQL> /* (2) Next the script finds the total number of physical and logical read block operations
+SQL>       performed by an improved implementation of the original query.                             */
+SQL> 
+SQL> INSERT INTO OPSTAT_TABLE (
+  2          SELECT OWNER,
+  3                 OBJECT_NAME,
+  4                 STATISTIC_NAME,
+  5                 VALUE,
+  6                 SYSTIMESTAMP
+  7          FROM   V$SEGMENT_STATISTICS
+  8          WHERE  OWNER = 'TPCHR' AND
+  9                 STATISTIC_NAME IN ('physical reads', 'logical reads') );
+
+2 rows created.
+
+SQL> 
+SQL> connect tpchr/oracle
+Connected.
+SQL> 
+SQL> SELECT COUNT(*)
+  2  FROM LINEITEM
+  3  WHERE (L_SHIPDATE >= '01-APR-1992' AND L_SHIPDATE <= '31-AUG-1992')    
+  4        OR
+  5        (L_SHIPDATE >= '01-JAN-1993' AND L_SHIPDATE <= '30-APR-1993');
+
+  COUNT(*)
+----------
+    200962
+
+1 row selected. 
+
+SQL> 
+SQL> connect system/oracle
+Connected.
+SQL> 
+SQL> SELECT V$SEGMENT_STATISTICS.OWNER,
+  2         V$SEGMENT_STATISTICS.OBJECT_NAME,
+  3         V$SEGMENT_STATISTICS.STATISTIC_NAME,
+  4         V$SEGMENT_STATISTICS.VALUE - NVL(OPSTAT_TABLE.VALUE,0) INCR
+  5  FROM   V$SEGMENT_STATISTICS LEFT OUTER JOIN OPSTAT_TABLE
+  6                              ON V$SEGMENT_STATISTICS.OWNER = OPSTAT_TABLE.OWNER AND
+  7                                 V$SEGMENT_STATISTICS.OBJECT_NAME = OPSTAT_TABLE.OBJECT_NAME AND
+  8                                 V$SEGMENT_STATISTICS.STATISTIC_NAME = OPSTAT_TABLE.STATISTIC_NAME
+  9  WHERE  V$SEGMENT_STATISTICS.OWNER = 'TPCHR' AND
+ 10        ( V$SEGMENT_STATISTICS.VALUE - NVL(OPSTAT_TABLE.VALUE,0) ) <> 0 AND
+ 11        V$SEGMENT_STATISTICS.OBJECT_NAME <> 'PLAN_TABLE' AND
+ 12        V$SEGMENT_STATISTICS.STATISTIC_NAME IN ('physical reads', 'logical reads')
+ 13  ORDER BY V$SEGMENT_STATISTICS.OBJECT_NAME, V$SEGMENT_STATISTICS.STATISTIC_NAME;
+
+OWNER      OBJECT_NAME          STATISTIC_NAME                       INCR
+---------- -------------------- ------------------------------ ----------
+TPCHR      LINEITEM             logical reads                       32368
+TPCHR      LINEITEM             physical reads                      32344
+
+2 rows selected. 
+
+SQL> 
+SQL> DROP TABLE OPSTAT_TABLE PURGE;
+
+Table dropped.
+
+SQL> 
+SQL> spool off

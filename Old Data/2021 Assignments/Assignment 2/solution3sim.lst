@@ -1,0 +1,173 @@
+SQL> 
+SQL> set echo on
+SQL> set feedback on
+SQL> set linesize 300
+SQL> set pagesize 500
+SQL> 
+SQL> /* (1) First, the script finds and lists a query processing plan for the original SELECT statement. 
+SQL>
+SQL>       Find the total number of orders submitted by the customers from each region in a given year(O_ORDERDATE). 
+SQL>       List the names of regions (R_NAME) together with the total number of orders submitted by the customers 
+SQL>       from each region.                                                                                         */
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT R_NAME, COUNT(O_CUSTKEY)
+  3  FROM REGION JOIN NATION
+  4              ON R_REGIONKEY = N_REGIONKEY
+  5  	    JOIN CUSTOMER
+  6  	    ON C_NATIONKEY = N_NATIONKEY
+  7  	    JOIN ORDERS
+  8  	    ON O_CUSTKEY = C_CUSTKEY
+  9  WHERE TO_CHAR(O_ORDERDATE, 'YYYY') = '1996'
+ 10  GROUP BY R_NAME;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2348383986
+ 
+-----------------------------------------------------------------------------------------------
+| Id  | Operation                       | Name        | Rows  | Bytes | Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                |             |     5 |   235 |  3525   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY                  |             |     5 |   235 |  3525   (1)| 00:00:01 |
+|*  2 |   HASH JOIN                     |             |  4500 |   206K|  3524   (1)| 00:00:01 |
+|   3 |    VIEW                         | VW_GBF_31   |    25 |   750 |    15   (7)| 00:00:01 |
+|   4 |     MERGE JOIN                  |             |    25 |   775 |    15   (7)| 00:00:01 |
+|   5 |      TABLE ACCESS BY INDEX ROWID| REGION      |     5 |   135 |     2   (0)| 00:00:01 |
+|   6 |       INDEX FULL SCAN           | REGION_PKEY |     5 |       |     1   (0)| 00:00:01 |
+|*  7 |      SORT JOIN                  |             |    25 |   100 |    13   (8)| 00:00:01 |
+|*  8 |       TABLE ACCESS FULL         | NATION      |    25 |   100 |    12   (0)| 00:00:01 |
+|*  9 |    HASH JOIN                    |             |  4500 | 76500 |  3509   (1)| 00:00:01 |
+|* 10 |     TABLE ACCESS FULL           | ORDERS      |  4500 | 49500 |  3119   (1)| 00:00:01 |
+|  11 |     TABLE ACCESS FULL           | CUSTOMER    | 45000 |   263K|   389   (0)| 00:00:01 |
+-----------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - access("C_NATIONKEY"="ITEM_1")
+   7 - access("R_REGIONKEY"="N_REGIONKEY")
+       filter("R_REGIONKEY"="N_REGIONKEY")
+   8 - filter("N_REGIONKEY">=0)
+   9 - access("O_CUSTKEY"="CUSTOMER"."C_CUSTKEY")
+  10 - filter(TO_CHAR(INTERNAL_FUNCTION("ORDERS"."O_ORDERDATE"),'YYYY')='1996' AND 
+              "O_CUSTKEY">=0)
+ 
+Note
+-----
+   - this is an adaptive plan
+
+33 rows selected. 
+
+SQL> 
+SQL> /* (2) Next, the script applies denormalization to speed up the processing of a given SELECT statement in 
+SQL>       the best possible way. Please remember to re-load data after denormalization.                            
+SQL>
+SQL>       Note, that in this task, there is NO need for indexing, there is no need for creation of derived 
+SQL>       attributes and there is no need for creation of materialized views or any additional relational tables.
+SQL>
+SQL>       It is recommended to start from denormalization of a conceptual schema given in a file tpchr.pdf before 
+SQL>       performing any changes to the relational tables of TPC-HR database. There is no need to provide 
+SQL>       the outcomes of denormalization of a conceptual schema.                                                   */
+SQL> 
+SQL> ALTER TABLE ORDERS ADD O_R_NAME VARCHAR(25);
+
+Table altered.
+
+SQL> 
+SQL> UPDATE ORDERS O
+  2  SET O_R_NAME = (SELECT R_NAME
+  3                  FROM REGION JOIN NATION
+  4  		            ON R_REGIONKEY = N_REGIONKEY
+  5  			    JOIN CUSTOMER
+  6  			    ON C_NATIONKEY = N_NATIONKEY
+  7  	        WHERE C_CUSTKEY = O.O_CUSTKEY);
+
+450000 rows updated.
+
+SQL> 
+SQL> /* (3) Next, the script finds and lists a query processing plan for SELECT statement, that implements 
+SQL>       the same query after denormalization performed in a step (2). Note, that after a denormalization 
+SQL>       implementation of the query must change because a structure of a database has change.                     
+SQL>
+SQL>       Of course, the estimated cost of processing in a query processing plan after denormalization must be 
+SQL>       significantly lower to than the estimated cost of processing before denormalization.                      */
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT O_R_NAME, COUNT(O_CUSTKEY)
+  3  FROM ORDERS
+  4  WHERE TO_CHAR(O_ORDERDATE, 'YYYY') = '1996'
+  5  GROUP BY O_R_NAME;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2183589723
+ 
+-----------------------------------------------------------------------------
+| Id  | Operation          | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |        |  4500 | 94500 |  3120   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY     |        |  4500 | 94500 |  3120   (1)| 00:00:01 |
+|*  2 |   TABLE ACCESS FULL| ORDERS |  4500 | 94500 |  3119   (1)| 00:00:01 |
+-----------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - filter(TO_CHAR(INTERNAL_FUNCTION("O_ORDERDATE"),'YYYY')='1996')
+
+14 rows selected. 
+
+SQL> 
+SQL> (4)	Next, in order to further reduce the estimated costs processing after denormalization, the script creates an index to speed up processing of  SELECT statement created in step (3) and again it lists a query processing plan for SELECT statement created a step (3).
+  2
+SQL> CREATE INDEX INDX4 ON ORDERS(TO_CHAR(O_ORDERDATE,'YYYY'),O_R_NAME,O_CUSTKEY);
+
+Index created.
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT O_R_NAME, COUNT(O_CUSTKEY)
+  3  FROM ORDERS
+  4  WHERE TO_CHAR(O_ORDERDATE, 'YYYY') = '1996'
+  5  GROUP BY O_R_NAME;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 775815853
+ 
+------------------------------------------------------------------------------
+| Id  | Operation            | Name  | Rows  | Bytes | Cost (%CPU)| Time     |
+------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |       |  4500 | 81000 |    14   (0)| 00:00:01 |
+|   1 |  SORT GROUP BY NOSORT|       |  4500 | 81000 |    14   (0)| 00:00:01 |
+|*  2 |   INDEX RANGE SCAN   | INDX4 |  4500 | 81000 |    14   (0)| 00:00:01 |
+------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - access(TO_CHAR(INTERNAL_FUNCTION("O_ORDERDATE"),'YYYY')='1996')
+
+14 rows selected. 
+
+SQL> 
+SQL> spool off
