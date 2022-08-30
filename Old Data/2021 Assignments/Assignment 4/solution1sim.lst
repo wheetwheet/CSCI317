@@ -1,0 +1,123 @@
+SQL> 
+SQL> set echo on
+SQL> set feedback on
+SQL> set linesize 300
+SQL> set pagesize 500
+SQL> 
+SQL> CREATE TABLE PART_NBT(
+  2  P_PARTKEY 	NUMBER(12) 	NOT NULL,
+  3  P_NAME		VARCHAR(55)	NOT NULL,
+  4  P_BRAND		CHAR(10)	NOT NULL,
+  5  P_TYPE		VARCHAR(25)	NOT NULL,
+  6  	CONSTRAINT PART_NBT_PKEY PRIMARY KEY (P_PARTKEY), 
+  7          CONSTRAINT PART_NBT_FKEY FOREIGN KEY (P_PARTKEY)
+  8                     REFERENCES PART(P_PARTKEY),
+  9  	CONSTRAINT PART_NBT_CHECK CHECK(P_PARTKEY >= 0) );
+
+Table created.
+
+SQL> 
+SQL> CREATE TABLE PART_COMMENTS(
+  2  P_PARTKEY 	NUMBER(12) 	NOT NULL,
+  3  P_COMMENT	VARCHAR(23)	NOT NULL,
+  4  	CONSTRAINT PART_COMMENTS_PKEY PRIMARY KEY (P_PARTKEY), 
+  5          CONSTRAINT PART_COMMENTS_FKEY FOREIGN KEY (P_PARTKEY)
+  6                     REFERENCES PART(P_PARTKEY) );
+
+Table created.
+
+SQL> 
+SQL> CREATE TABLE PART_OTHERS(
+  2  P_PARTKEY 	NUMBER(12) 	NOT NULL,
+  3  P_MFGR		VARCHAR(25)	NOT NULL,
+  4  P_SIZE		NUMBER(12)	NOT NULL,
+  5  P_CONTAINER 	CHAR(10)	NOT NULL,
+  6  P_RETAILPRICE	NUMBER(12,2)	NOT NULL,
+  7  	CONSTRAINT PART_OTHERS_PKEY PRIMARY KEY (P_PARTKEY), 
+  8          CONSTRAINT PART_OTHERS_FKEY FOREIGN KEY (P_PARTKEY)
+  9                     REFERENCES PART(P_PARTKEY),
+ 10  	CONSTRAINT PART_OTHERS_CHECK1 CHECK(P_PARTKEY >= 0),
+ 11  	CONSTRAINT PART_OTHERS_CHECK2 CHECK(P_SIZE >= 0),
+ 12  	CONSTRAINT PART_OTHERS_CHECK3 CHECK(P_RETAILPRICE >= 0) );
+
+Table created.
+
+SQL> 
+SQL> INSERT
+  2  ALL
+  3  INTO PART_NBT 
+  4   VALUES (P_PARTKEY, P_NAME, P_BRAND, P_TYPE)
+  5  INTO PART_COMMENTS
+  6   VALUES (P_PARTKEY, P_COMMENT)
+  7  INTO PART_OTHERS
+  8    VALUES(P_PARTKEY, P_MFGR, P_SIZE, P_CONTAINER, P_RETAILPRICE)
+  9  (SELECT *
+ 10   FROM PART WHERE P_PARTKEY IN (SELECT PS_PARTKEY
+ 11                                 FROM PARTSUPP) );
+
+180000 rows created.
+
+SQL> 
+SQL> DROP TABLE PART_NBT PURGE;
+
+Table dropped.
+
+SQL> DROP TABLE PART_COMMENTS PURGE;
+
+Table dropped.
+
+SQL> DROP TABLE PART_OTHERS PURGE;
+
+Table dropped.
+
+SQL> 
+SQL> spool off
+
+/* Testing
+SQL> @showstat
+Script name> task1.sql
+
+Owner                Object name          Statistic name            Statistic value
+-------------------- -------------------- ------------------------- ---------------
+TPCHR                PART                 logical reads                     180,848
+TPCHR                PART                 physical reads                      1,088
+TPCHR                PARTSUPP_PKEY        logical reads                       2,656
+TPCHR                PARTSUPP_PKEY        physical reads                        876
+TPCHR                PART_PEKEY           logical reads                     720,288
+TPCHR                PART_PEKEY           physical reads                        124
+
+Statistic name                           Statistic value
+---------------------------------------- ---------------
+bytes sent via SQL*Net to client                  10,867
+bytes received via SQL*Net from client            11,766
+SQL> 
+SQL> prompt Done.
+Done.
+
+
+SQL> @showstat
+Script name> solution1.sql
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Owner                Object name          Statistic name            Statistic value
+-------------------- -------------------- ------------------------- ---------------
+TPCHR                LINEITEM             physical writes                     1,167
+TPCHR                LINEITEM_PKEY        physical writes                       160
+TPCHR                ORDERS_PKEY          physical writes                        32
+TPCHR                PART                 logical reads                         832
+TPCHR                PARTSUPP             logical reads                          16
+TPCHR                PARTSUPP_PKEY        logical reads                         896
+TPCHR                PART_PEKEY           logical reads                     360,528
+
+7 rows selected. 
+
+
+Statistic name                           Statistic value
+---------------------------------------- ---------------
+bytes sent via SQL*Net to client                  10,873
+bytes received via SQL*Net from client            11,200
+
+2 rows selected. 
+
+*/
+

@@ -1,0 +1,514 @@
+SQL> set linesize 300
+SQL> set pagesize 500
+SQL> 
+SQL> /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+SQL> /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+SQL> /* 1 */
+SQL> EXPLAIN PLAN FOR
+  2  SELECT DISTINCT l_extendedprice
+  3  FROM LINEITEM
+  4  WHERE l_extendedprice >= ALL (SELECT l_extendedprice
+  5                                FROM LINEITEM);
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 225578700
+ 
+-----------------------------------------------------------------------------------------
+| Id  | Operation            | Name     | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |          |  1845K|    45M|       | 56389   (1)| 00:00:03 |
+|   1 |  SORT UNIQUE NOSORT  |          |  1845K|    45M|       | 56389   (1)| 00:00:03 |
+|   2 |   MERGE JOIN ANTI    |          |  1845K|    45M|       | 42747   (1)| 00:00:02 |
+|   3 |    SORT JOIN         |          |  1942K|    24M|    74M| 21372   (1)| 00:00:01 |
+|   4 |     TABLE ACCESS FULL| LINEITEM |  1942K|    24M|       | 12149   (1)| 00:00:01 |
+|*  5 |    SORT UNIQUE       |          |  1942K|    24M|    74M| 21375   (1)| 00:00:01 |
+|*  6 |     TABLE ACCESS FULL| LINEITEM |  1942K|    24M|       | 12152   (1)| 00:00:01 |
+-----------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   5 - access("L_EXTENDEDPRICE"<"L_EXTENDEDPRICE")
+       filter("L_EXTENDEDPRICE"<"L_EXTENDEDPRICE")
+   6 - filter("L_EXTENDEDPRICE">0)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+24 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT MAX(l_extendedprice)
+  3  FROM LINEITEM;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2287326370
+ 
+-------------------------------------------------------------------------------
+| Id  | Operation          | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |     1 |    13 | 12149   (1)| 00:00:01 |
+|   1 |  SORT AGGREGATE    |          |     1 |    13 |            |          |
+|   2 |   TABLE ACCESS FULL| LINEITEM |  1942K|    24M| 12149   (1)| 00:00:01 |
+-------------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+13 rows selected. 
+
+SQL> 
+SQL> /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+SQL> /* 2 */
+SQL> EXPLAIN PLAN FOR
+  2  SELECT p_partkey, p_retailprice
+  3  FROM PART
+  4  WHERE p_retailprice > (SELECT MAX(p_retailprice)
+  5                           FROM PART
+  6                           WHERE p_brand = 'Brand#13') AND
+  7        p_retailprice > (SELECT MAX(p_retailprice)
+  8                           FROM PART
+  9                           WHERE p_brand = 'Brand#23') AND
+ 10        p_retailprice > (SELECT MAX(p_retailprice)
+ 11                           FROM PART
+ 12                           WHERE p_brand = 'Brand#55');
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1267239412
+ 
+----------------------------------------------------------------------------
+| Id  | Operation           | Name | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT    |      |     8 |   208 |  1604   (1)| 00:00:01 |
+|*  1 |  TABLE ACCESS FULL  | PART |     8 |   208 |   401   (1)| 00:00:01 |
+|   2 |   SORT AGGREGATE    |      |     1 |    25 |            |          |
+|*  3 |    TABLE ACCESS FULL| PART |  2500 | 62500 |   401   (1)| 00:00:01 |
+|   4 |   SORT AGGREGATE    |      |     1 |    25 |            |          |
+|*  5 |    TABLE ACCESS FULL| PART |  2398 | 59950 |   401   (1)| 00:00:01 |
+|   6 |   SORT AGGREGATE    |      |     1 |    25 |            |          |
+|*  7 |    TABLE ACCESS FULL| PART |  2702 | 67550 |   401   (1)| 00:00:01 |
+----------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter("P_RETAILPRICE"> (SELECT MAX("P_RETAILPRICE") FROM "PART" 
+              "PART" WHERE "P_BRAND"='Brand#13') AND "P_RETAILPRICE"> (SELECT 
+              MAX("P_RETAILPRICE") FROM "PART" "PART" WHERE "P_BRAND"='Brand#23') AND 
+              "P_RETAILPRICE"> (SELECT MAX("P_RETAILPRICE") FROM "PART" "PART" WHERE 
+              "P_BRAND"='Brand#55'))
+   3 - filter("P_BRAND"='Brand#13')
+   5 - filter("P_BRAND"='Brand#23')
+   7 - filter("P_BRAND"='Brand#55')
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+30 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT p_partkey, p_retailprice
+  3  FROM PART
+  4  WHERE p_retailprice > (SELECT MAX(p_retailprice)
+  5                         FROM PART
+  6                         WHERE p_brand IN ('Brand#13', 'Brand#23', 'Brand#55'));
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 672711910
+ 
+----------------------------------------------------------------------------
+| Id  | Operation           | Name | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT    |      |  3016 | 78416 |   802   (1)| 00:00:01 |
+|*  1 |  TABLE ACCESS FULL  | PART |  3016 | 78416 |   401   (1)| 00:00:01 |
+|   2 |   SORT AGGREGATE    |      |     1 |    25 |            |          |
+|*  3 |    TABLE ACCESS FULL| PART |  7600 |   185K|   401   (1)| 00:00:01 |
+----------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter("P_RETAILPRICE"> (SELECT MAX("P_RETAILPRICE") FROM "PART" 
+              "PART" WHERE "P_BRAND"='Brand#13' OR "P_BRAND"='Brand#23' OR 
+              "P_BRAND"='Brand#55'))
+   3 - filter("P_BRAND"='Brand#13' OR "P_BRAND"='Brand#23' OR 
+              "P_BRAND"='Brand#55')
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+23 rows selected. 
+
+SQL> 
+SQL> /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+SQL> /* 3 */
+SQL> EXPLAIN PLAN FOR
+  2  SELECT   p_partkey, 0
+  3  FROM     PART
+  4  WHERE    NOT EXISTS (SELECT 'whatever'
+  5                        FROM LINEITEM
+  6                        WHERE l_partkey = p_partkey)
+  7  UNION
+  8  SELECT   l_partkey, COUNT(*)
+  9  FROM     LINEITEM
+ 10  GROUP BY l_partkey;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3740592386
+ 
+----------------------------------------------------------------------------------------------
+| Id  | Operation               | Name       | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT        |            |  2003K|    25M|       | 36448   (1)| 00:00:02 |
+|   1 |  SORT UNIQUE            |            |  2003K|    25M|    39M| 36448   (1)| 00:00:02 |
+|   2 |   UNION-ALL             |            |       |       |       |            |          |
+|*  3 |    HASH JOIN ANTI       |            | 60310 |  1531K|  1480K| 14584   (1)| 00:00:01 |
+|   4 |     INDEX FAST FULL SCAN| PART_PEKEY | 60310 |   765K|       |    58   (0)| 00:00:01 |
+|*  5 |     TABLE ACCESS FULL   | LINEITEM   |  1942K|    24M|       | 12148   (1)| 00:00:01 |
+|   6 |    HASH GROUP BY        |            |  1942K|    24M|    37M| 21418   (1)| 00:00:01 |
+|   7 |     TABLE ACCESS FULL   | LINEITEM   |  1942K|    24M|       | 12145   (1)| 00:00:01 |
+----------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   3 - access("L_PARTKEY"="P_PARTKEY")
+   5 - filter("L_PARTKEY">=0)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+24 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT p_partkey, COUNT(l_partkey)
+  3  FROM PART LEFT OUTER JOIN LINEITEM
+  4            ON p_partkey = l_partkey
+  5  GROUP BY p_partkey;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3687066617
+ 
+---------------------------------------------------------------------------------------------
+| Id  | Operation              | Name       | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT       |            |  1942K|    48M|       | 14634   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY         |            |  1942K|    48M|       | 14634   (1)| 00:00:01 |
+|*  2 |   HASH JOIN OUTER      |            |  1942K|    48M|  1480K| 14584   (1)| 00:00:01 |
+|   3 |    INDEX FAST FULL SCAN| PART_PEKEY | 60310 |   765K|       |    58   (0)| 00:00:01 |
+|*  4 |    TABLE ACCESS FULL   | LINEITEM   |  1942K|    24M|       | 12148   (1)| 00:00:01 |
+---------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - access("P_PARTKEY"="L_PARTKEY"(+))
+   4 - filter("L_PARTKEY"(+)>=0)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+21 rows selected. 
+
+SQL> 
+SQL> /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+SQL> /* 4 */
+SQL> EXPLAIN PLAN FOR
+  2  SELECT l_orderkey
+  3  FROM LINEITEM l
+  4  WHERE (SELECT COUNT(*)
+  5         FROM LINEITEM
+  6         WHERE l_orderkey = l.l_orderkey) > 5;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2530070835
+ 
+---------------------------------------------------------------------------------------
+| Id  | Operation             | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |               |  1942K|    24M|    32M  (1)| 00:21:05 |
+|*  1 |  FILTER               |               |       |       |            |          |
+|   2 |   INDEX FAST FULL SCAN| LINEITEM_PKEY |  1942K|    24M|  1571   (1)| 00:00:01 |
+|   3 |   SORT AGGREGATE      |               |     1 |    13 |            |          |
+|*  4 |    INDEX RANGE SCAN   | LINEITEM_PKEY | 19427 |   246K|    18   (0)| 00:00:01 |
+---------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter( (SELECT COUNT(*) FROM "LINEITEM" "LINEITEM" WHERE 
+              "L_ORDERKEY"=:B1)>5)
+   4 - access("L_ORDERKEY"=:B1)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+22 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT l_orderkey
+  3  FROM LINEITEM
+  4  GROUP BY l_orderkey
+  5  HAVING COUNT(*) > 5;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3365344364
+ 
+---------------------------------------------------------------------------------------
+| Id  | Operation             | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |               |  1942K|    24M|  1621   (4)| 00:00:01 |
+|*  1 |  HASH GROUP BY        |               |  1942K|    24M|  1621   (4)| 00:00:01 |
+|   2 |   INDEX FAST FULL SCAN| LINEITEM_PKEY |  1942K|    24M|  1571   (1)| 00:00:01 |
+---------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter(COUNT(*)>5)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+18 rows selected. 
+
+SQL> 
+SQL> /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+SQL> /* 5 */
+SQL> EXPLAIN PLAN FOR
+  2  SELECT DISTINCT n_regionkey, (SELECT count(*)
+  3                                FROM nation
+  4                                WHERE n_regionkey = n.n_regionkey)
+  5  FROM nation n;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1466266092
+ 
+-----------------------------------------------------------------------------
+| Id  | Operation          | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |        |    25 |   325 |    44   (3)| 00:00:01 |
+|   1 |  SORT AGGREGATE    |        |     1 |    13 |            |          |
+|*  2 |   TABLE ACCESS FULL| NATION |     1 |    13 |    12   (0)| 00:00:01 |
+|   3 |  HASH UNIQUE       |        |    25 |   325 |    44   (3)| 00:00:01 |
+|   4 |   TABLE ACCESS FULL| NATION |    25 |   325 |    12   (0)| 00:00:01 |
+-----------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - filter("N_REGIONKEY"=:B1)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+20 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT n_regionkey, count(*)
+  3  FROM nation
+  4  GROUP BY n_regionkey;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 4075874638
+ 
+-----------------------------------------------------------------------------
+| Id  | Operation          | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |        |     1 |    13 |    13   (8)| 00:00:01 |
+|   1 |  HASH GROUP BY     |        |     1 |    13 |    13   (8)| 00:00:01 |
+|   2 |   TABLE ACCESS FULL| NATION |     1 |    13 |    12   (0)| 00:00:01 |
+-----------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+13 rows selected. 
+
+SQL> 
+SQL> /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+SQL> /* 6*/
+SQL> EXPLAIN PLAN FOR
+  2  SELECT *
+  3  FROM LINEITEM
+  4  WHERE l_extendedprice > (SELECT MIN(l_extendedprice)
+  5                           FROM LINEITEM)
+  6        AND
+  7        l_extendedprice < (SELECT MAX(l_extendedprice)
+  8                           FROM LINEITEM);
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3936291468
+ 
+--------------------------------------------------------------------------------
+| Id  | Operation           | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+--------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT    |          |  4857 |   948K| 36450   (1)| 00:00:02 |
+|*  1 |  TABLE ACCESS FULL  | LINEITEM |  4857 |   948K| 12152   (1)| 00:00:01 |
+|   2 |   SORT AGGREGATE    |          |     1 |    13 |            |          |
+|   3 |    TABLE ACCESS FULL| LINEITEM |  1942K|    24M| 12149   (1)| 00:00:01 |
+|   4 |   SORT AGGREGATE    |          |     1 |    13 |            |          |
+|   5 |    TABLE ACCESS FULL| LINEITEM |  1942K|    24M| 12149   (1)| 00:00:01 |
+--------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - filter("L_EXTENDEDPRICE"> (SELECT MIN("L_EXTENDEDPRICE") FROM 
+              "LINEITEM" "LINEITEM") AND "L_EXTENDEDPRICE"< (SELECT 
+              MAX("L_EXTENDEDPRICE") FROM "LINEITEM" "LINEITEM"))
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+23 rows selected. 
+
+SQL> 
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  WITH MINMAX AS (SELECT MIN(l_extendedprice) mn , MAX(l_extendedprice) mx
+  3                  FROM LINEITEM)
+  4  SELECT *
+  5  FROM LINEITEM 
+  6  WHERE l_extendedprice > (SELECT mn
+  7                         FROM MINMAX)
+  8        AND
+  9        l_extendedprice < (SELECT mx
+ 10                           FROM MINMAX);
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2232252375
+ 
+----------------------------------------------------------------------------------------------------------------------
+| Id  | Operation                                | Name                      | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT                         |                           |  4857 |   948K| 24305   (1)| 00:00:01 |
+|   1 |  TEMP TABLE TRANSFORMATION               |                           |       |       |            |          |
+|   2 |   LOAD AS SELECT (CURSOR DURATION MEMORY)| SYS_TEMP_0FD9D6612_CFEC55 |       |       |            |          |
+|   3 |    SORT AGGREGATE                        |                           |     1 |    13 |            |          |
+|   4 |     TABLE ACCESS FULL                    | LINEITEM                  |  1942K|    24M| 12149   (1)| 00:00:01 |
+|*  5 |   TABLE ACCESS FULL                      | LINEITEM                  |  4857 |   948K| 12152   (1)| 00:00:01 |
+|   6 |    VIEW                                  |                           |     1 |    13 |     2   (0)| 00:00:01 |
+|   7 |     TABLE ACCESS FULL                    | SYS_TEMP_0FD9D6612_CFEC55 |     1 |    13 |     2   (0)| 00:00:01 |
+|   8 |    VIEW                                  |                           |     1 |    13 |     2   (0)| 00:00:01 |
+|   9 |     TABLE ACCESS FULL                    | SYS_TEMP_0FD9D6612_CFEC55 |     1 |    13 |     2   (0)| 00:00:01 |
+----------------------------------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   5 - filter("L_EXTENDEDPRICE"> (SELECT "MN" FROM  (SELECT /*+ CACHE ("T1") */ "C0" "MN","C1" "MX" FROM 
+              "SYS"."SYS_TEMP_0FD9D6612_CFEC55" "T1") "MINMAX") AND "L_EXTENDEDPRICE"< (SELECT "MX" FROM  (SELECT /*+ CACHE 
+              ("T1") */ "C0" "MN","C1" "MX" FROM "SYS"."SYS_TEMP_0FD9D6612_CFEC55" "T1") "MINMAX"))
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+27 rows selected. 
+
+SQL> 
+SQL> /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+SQL> /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+SQL> 
+SQL> spool off

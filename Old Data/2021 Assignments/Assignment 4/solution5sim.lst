@@ -1,0 +1,523 @@
+SQL> set feedback on
+SQL> set linesize 300
+SQL> set pagesize 100
+SQL> 
+SQL> connect sys/oracle as sysdba
+Connected.
+SQL> 
+SQL> ALTER SYSTEM SET INMEMORY_SIZE=400M SCOPE=SPFILE;
+
+System altered.
+
+SQL> 
+SQL> shutdown immediate
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+SQL> 
+SQL> startup
+ORACLE instance started.
+
+Total System Global Area   943716976 bytes      
+Fixed Size                   8903280 bytes      
+Variable Size              314572800 bytes      
+Database Buffers           192937984 bytes      
+Redo Buffers                 7872512 bytes      
+In-Memory Area             419430400 bytes      
+Database mounted.
+Database opened.
+SQL> 
+SQL> show parameters inmemory_size
+NAME          TYPE        VALUE 
+------------- ----------- ----- 
+inmemory_size big integer 400M  
+SQL> 
+SQL> SELECT POOL, ALLOC_BYTES, USED_BYTES, POPULATE_STATUS
+  2  FROM V$INMEMORY_AREA;
+
+POOL                       ALLOC_BYTES USED_BYTES POPULATE_STATUS           
+-------------------------- ----------- ---------- --------------------------
+1MB POOL                     292552704          0 DONE                      
+64KB POOL                    109051904          0 DONE                      
+
+2 rows selected. 
+
+SQL> 
+SQL> connect tpchr/oracle
+Connected.
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT( DISTINCT L_TAX)
+  3  FROM LINEITEM 
+  4  WHERE L_SHIPINSTRUCT LIKE '%DELIVER IN PERSON%';
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1987383118
+ 
+---------------------------------------------------------------------------------
+| Id  | Operation            | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |          |     1 |    13 | 12175   (1)| 00:00:01 |
+|   1 |  SORT AGGREGATE      |          |     1 |    13 |            |          |
+|   2 |   VIEW               | VW_DAG_0 |   476K|  6054K| 12175   (1)| 00:00:01 |
+|   3 |    HASH GROUP BY     |          |   476K|    18M| 12175   (1)| 00:00:01 |
+|*  4 |     TABLE ACCESS FULL| LINEITEM |   476K|    18M| 12163   (1)| 00:00:01 |
+---------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   4 - filter("L_SHIPINSTRUCT" LIKE '%DELIVER IN PERSON%')
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+20 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT(O_ORDERDATE)
+  3  FROM ORDERS;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3211320914
+ 
+-----------------------------------------------------------------------------
+| Id  | Operation             | Name        | Rows  | Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |             |     1 |   342   (0)| 00:00:01 |
+|   1 |  SORT AGGREGATE       |             |     1 |            |          |
+|   2 |   INDEX FAST FULL SCAN| ORDERS_PKEY |   472K|   342   (0)| 00:00:01 |
+-----------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+13 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT AVG(PS_AVAILQTY)
+  3  FROM PARTSUPP;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 833953179
+ 
+-------------------------------------------------------------------------------
+| Id  | Operation          | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |     1 |    13 |  1856   (1)| 00:00:01 |
+|   1 |  SORT AGGREGATE    |          |     1 |    13 |            |          |
+|   2 |   TABLE ACCESS FULL| PARTSUPP |   229K|  2912K|  1856   (1)| 00:00:01 |
+-------------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+13 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT(DISTINCT PS_COMMENT)
+  3  FROM PARTSUPP;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 790984355
+ 
+---------------------------------------------------------------------------------
+| Id  | Operation            | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |          |     1 |   101 |  1862   (1)| 00:00:01 |
+|   1 |  SORT AGGREGATE      |          |     1 |   101 |            |          |
+|   2 |   VIEW               | VW_DAG_0 |   229K|    22M|  1862   (1)| 00:00:01 |
+|   3 |    HASH GROUP BY     |          |   229K|    22M|  1862   (1)| 00:00:01 |
+|   4 |     TABLE ACCESS FULL| PARTSUPP |   229K|    22M|  1856   (1)| 00:00:01 |
+---------------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+15 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT(*)
+  3  FROM ORDERS
+  4  WHERE O_TOTALPRICE > 100;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 630573765
+ 
+-----------------------------------------------------------------------------
+| Id  | Operation          | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |        |     1 |    13 |  2697   (1)| 00:00:01 |
+|   1 |  SORT AGGREGATE    |        |     1 |    13 |            |          |
+|*  2 |   TABLE ACCESS FULL| ORDERS |   472K|  6004K|  2697   (1)| 00:00:01 |
+-----------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - filter("O_TOTALPRICE">100)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+18 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT(*)
+  3  FROM ORDERS;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3211320914
+ 
+-----------------------------------------------------------------------------
+| Id  | Operation             | Name        | Rows  | Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |             |     1 |   342   (0)| 00:00:01 |
+|   1 |  SORT AGGREGATE       |             |     1 |            |          |
+|   2 |   INDEX FAST FULL SCAN| ORDERS_PKEY |   472K|   342   (0)| 00:00:01 |
+-----------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+13 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT MIN(L_TAX), MAX(L_TAX)
+  3  FROM LINEITEM;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2287326370
+ 
+-------------------------------------------------------------------------------
+| Id  | Operation          | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |     1 |    13 | 12151   (1)| 00:00:01 |
+|   1 |  SORT AGGREGATE    |          |     1 |    13 |            |          |
+|   2 |   TABLE ACCESS FULL| LINEITEM |  1942K|    24M| 12151   (1)| 00:00:01 |
+-------------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+13 rows selected. 
+
+SQL> 
+SQL> /* Populate In-Memory area  */
+SQL> ALTER TABLE LINEITEM INMEMORY NO INMEMORY(L_ORDERKEY,L_PARTKEY,L_SUPPKEY,L_LINENUMBER,                
+  2                                            L_QUANTITY,L_EXTENDEDPRICE,L_DISCOUNT,L_RETURNFLAG,            
+  3                                            L_LINESTATUS,L_SHIPDATE,L_COMMITDATE,L_RECEIPTDATE,
+  4                                            L_SHIPMODE,L_COMMENT );
+
+Table altered.
+
+SQL> 
+SQL> ALTER TABLE ORDERS INMEMORY NO INMEMORY(O_ORDERKEY,O_CUSTKEY,O_ORDERSTATUS,O_ORDERDATE,
+  2                                          O_ORDERPRIORITY,O_CLERK,O_SHIPPRIORITY,O_COMMENT);
+
+Table altered.
+
+SQL> 
+SQL> ALTER TABLE PARTSUPP INMEMORY NO INMEMORY(PS_PARTKEY,PS_SUPPKEY,PS_AVAILQTY,PS_SUPPLYCOST);
+
+Table altered.
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT( DISTINCT L_TAX)
+  3  FROM LINEITEM 
+  4  WHERE L_SHIPINSTRUCT LIKE '%DELIVER IN PERSON%';
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1987383118
+ 
+------------------------------------------------------------------------------------------
+| Id  | Operation                     | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT              |          |     1 |    13 | 12175   (1)| 00:00:01 |
+|   1 |  SORT AGGREGATE               |          |     1 |    13 |            |          |
+|   2 |   VIEW                        | VW_DAG_0 |   476K|  6054K| 12175   (1)| 00:00:01 |
+|   3 |    HASH GROUP BY              |          |   476K|    18M| 12175   (1)| 00:00:01 |
+|*  4 |     TABLE ACCESS INMEMORY FULL| LINEITEM |   476K|    18M| 12163   (1)| 00:00:01 |
+------------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   4 - inmemory("L_SHIPINSTRUCT" LIKE '%DELIVER IN PERSON%')
+       filter("L_SHIPINSTRUCT" LIKE '%DELIVER IN PERSON%')
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+21 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT(O_ORDERDATE)
+  3  FROM ORDERS;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3211320914
+ 
+-----------------------------------------------------------------------------
+| Id  | Operation             | Name        | Rows  | Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |             |     1 |   342   (0)| 00:00:01 |
+|   1 |  SORT AGGREGATE       |             |     1 |            |          |
+|   2 |   INDEX FAST FULL SCAN| ORDERS_PKEY |   472K|   342   (0)| 00:00:01 |
+-----------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+13 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT AVG(PS_AVAILQTY)
+  3  FROM PARTSUPP;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 833953179
+ 
+-------------------------------------------------------------------------------
+| Id  | Operation          | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |     1 |    13 |  1856   (1)| 00:00:01 |
+|   1 |  SORT AGGREGATE    |          |     1 |    13 |            |          |
+|   2 |   TABLE ACCESS FULL| PARTSUPP |   229K|  2912K|  1856   (1)| 00:00:01 |
+-------------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+13 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT(DISTINCT PS_COMMENT)
+  3  FROM PARTSUPP;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 790984355
+ 
+------------------------------------------------------------------------------------------
+| Id  | Operation                     | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT              |          |     1 |   101 |  1862   (1)| 00:00:01 |
+|   1 |  SORT AGGREGATE               |          |     1 |   101 |            |          |
+|   2 |   VIEW                        | VW_DAG_0 |   229K|    22M|  1862   (1)| 00:00:01 |
+|   3 |    HASH GROUP BY              |          |   229K|    22M|  1862   (1)| 00:00:01 |
+|   4 |     TABLE ACCESS INMEMORY FULL| PARTSUPP |   229K|    22M|  1856   (1)| 00:00:01 |
+------------------------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+15 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT(*)
+  3  FROM ORDERS
+  4  WHERE O_TOTALPRICE > 100;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 630573765
+ 
+--------------------------------------------------------------------------------------
+| Id  | Operation                   | Name   | Rows  | Bytes | Cost (%CPU)| Time     |
+--------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT            |        |     1 |    13 |  2697   (1)| 00:00:01 |
+|   1 |  SORT AGGREGATE             |        |     1 |    13 |            |          |
+|*  2 |   TABLE ACCESS INMEMORY FULL| ORDERS |   472K|  6004K|  2697   (1)| 00:00:01 |
+--------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - inmemory("O_TOTALPRICE">100)
+       filter("O_TOTALPRICE">100)
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+19 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT COUNT(*)
+  3  FROM ORDERS;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3211320914
+ 
+-----------------------------------------------------------------------------
+| Id  | Operation             | Name        | Rows  | Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |             |     1 |   342   (0)| 00:00:01 |
+|   1 |  SORT AGGREGATE       |             |     1 |            |          |
+|   2 |   INDEX FAST FULL SCAN| ORDERS_PKEY |   472K|   342   (0)| 00:00:01 |
+-----------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+13 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT MIN(L_TAX), MAX(L_TAX)
+  3  FROM LINEITEM;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2287326370
+ 
+----------------------------------------------------------------------------------------
+| Id  | Operation                   | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT            |          |     1 |    13 | 12151   (1)| 00:00:01 |
+|   1 |  SORT AGGREGATE             |          |     1 |    13 |            |          |
+|   2 |   TABLE ACCESS INMEMORY FULL| LINEITEM |  1942K|    24M| 12151   (1)| 00:00:01 |
+----------------------------------------------------------------------------------------
+ 
+Note
+-----
+   - dynamic statistics used: dynamic sampling (level=2)
+
+13 rows selected. 
+
+SQL> 
+SQL> /* Excluding tables from In-Memory Area */
+SQL> ALTER TABLE LINEITEM NO INMEMORY;
+
+Table altered.
+
+SQL> ALTER TABLE ORDERS NO INMEMORY;
+
+Table altered.
+
+SQL> ALTER TABLE PARTSUPP NO INMEMORY;
+
+Table altered.
+
+SQL> 
+SQL> spool off

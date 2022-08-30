@@ -1,0 +1,89 @@
+SQL> 
+SQL> set echo on
+SQL> set feedback on
+SQL> set linesize 100
+SQL> set pagesize 50
+SQL> 
+SQL> connect sys/oracle as sysdba
+Connected.
+SQL> ALTER SYSTEM SET db_cache_size=20M SCOPE=SPFILE;
+
+System altered.
+
+SQL> ALTER SYSTEM SET db_keep_cache_size=350M SCOPE=SPFILE;
+
+System altered.
+
+SQL> ALTER SYSTEM SET db_recycle_cache_size=4M SCOPE=SPFILE;
+
+System altered.
+
+SQL> 
+SQL> shutdown immediate
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+SQL> 
+SQL> startup
+ORACLE instance started.
+
+Total System Global Area   943716976 bytes      
+Fixed Size                   8903280 bytes      
+Variable Size              532676608 bytes      
+Database Buffers           394264576 bytes      
+Redo Buffers                 7872512 bytes      
+Database mounted.
+Database opened.
+SQL> 
+SQL> connect system/oracle
+Connected.
+SQL> 
+SQL> show parameters db_cache_size
+NAME          TYPE        VALUE 
+------------- ----------- ----- 
+db_cache_size big integer 20M   
+SQL> show parameters db_keep_cache_size
+NAME               TYPE        VALUE 
+------------------ ----------- ----- 
+db_keep_cache_size big integer 352M  
+SQL> show parameters db_recycle_cache_size
+NAME                  TYPE        VALUE 
+--------------------- ----------- ----- 
+db_recycle_cache_size big integer 4M    
+SQL> 
+SQL> ALTER TABLE TPCHR.ORDERS STORAGE (BUFFER_POOL KEEP);
+
+Table altered.
+
+SQL> ALTER TABLE TPCHR.PARTSUPP STORAGE (BUFFER_POOL KEEP);
+
+Table altered.
+
+SQL> ALTER TABLE TPCHR.CUSTOMER STORAGE (BUFFER_POOL KEEP);
+
+Table altered.
+
+SQL> ALTER TABLE TPCHR.PART STORAGE (BUFFER_POOL KEEP);
+
+Table altered.
+
+SQL> ALTER TABLE TPCHR.SUPPLIER STORAGE (BUFFER_POOL KEEP);
+
+Table altered.
+
+SQL> 
+SQL> ALTER TABLE TPCHR.NATION STORAGE (BUFFER_POOL DEFAULT);
+
+Table altered.
+
+SQL> ALTER TABLE TPCHR.REGION STORAGE (BUFFER_POOL DEFAULT);
+
+Table altered.
+
+SQL> 
+SQL> ALTER TABLE TPCHR.LINEITEM STORAGE (BUFFER_POOL RECYCLE);
+
+Table altered.
+
+SQL> 
+SQL> spool off
