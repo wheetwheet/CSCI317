@@ -1,0 +1,174 @@
+SQL> 
+SQL> set linesize 100
+SQL> set pagesize 200
+SQL> set echo on
+SQL> set feedback on
+SQL> 
+SQL> /* Implement SQL script solution1.sql that performs the following actions.                                 */
+SQL> 
+SQL> /* (1) First the script connects to a database server as a user SYSTEM and list the following columns from 
+SQL>       a dynamic performance view V$INSTANCE:
+SQL>       INSTANCE_NAME,
+SQL>       HOST_NAME,
+SQL>       STARTUP_TIME,
+SQL>       DATABASE_STATUS.
+SQL>
+SQL>       To connect to a database server within SQL script as a user xyz007 with a password password insert 
+SQL>       the following line into the script.
+SQL>
+SQL>       connect xyz007/password                                                                             */
+SQL> 
+SQL> connect SYSTEM/oracle
+Connected.
+SQL> 
+SQL> column HOST_NAME format A30
+SQL> 
+SQL> SELECT INSTANCE_NAME,
+  2         HOST_NAME,
+  3         STARTUP_TIME,
+  4         DATABASE_STATUS
+  5  FROM V$INSTANCE;
+
+INSTANCE_NAME    HOST_NAME                      STARTUP_T DATABASE_STATUS  
+---------------- ------------------------------ --------- -----------------
+db               localhost.localdomain          04-JUL-21 ACTIVE           
+
+1 row selected. 
+
+SQL> 
+SQL> /* (2) Next, the script connects as a user tpchr and it processes ANALYZE TABLE and ANALYZE INDEX 
+SQL>       statements to load into a data dictionary statistical information related to the relational 
+SQL>       tables and indexes implementing a sample database tpchr created earlier.                           */
+SQL> 
+SQL> connect tpchr/oracle
+Connected.
+SQL> 
+SQL> ANALYZE TABLE NATION COMPUTE STATISTICS;
+
+Table analyzed.
+
+SQL> ANALYZE TABLE REGION COMPUTE STATISTICS;
+
+Table analyzed.
+
+SQL> ANALYZE TABLE PART COMPUTE STATISTICS;
+
+Table analyzed.
+
+SQL> ANALYZE TABLE SUPPLIER COMPUTE STATISTICS;
+
+Table analyzed.
+
+SQL> ANALYZE TABLE PARTSUPP COMPUTE STATISTICS;
+
+Table analyzed.
+
+SQL> ANALYZE TABLE CUSTOMER COMPUTE STATISTICS;
+
+Table analyzed.
+
+SQL> ANALYZE TABLE ORDERS COMPUTE STATISTICS;
+
+Table analyzed.
+
+SQL> ANALYZE TABLE LINEITEM COMPUTE STATISTICS;
+
+Table analyzed.
+
+SQL> 
+SQL> ANALYZE INDEX REGION_PKEY COMPUTE STATISTICS;
+
+Index analyzed.
+
+SQL> ANALYZE INDEX NATION_PKEY COMPUTE STATISTICS;
+
+Index analyzed.
+
+SQL> ANALYZE INDEX PART_PEKEY COMPUTE STATISTICS;
+
+Index analyzed.
+
+SQL> ANALYZE INDEX SUPPLIER_PKEY COMPUTE STATISTICS;
+
+Index analyzed.
+
+SQL> ANALYZE INDEX PARTSUPP_PKEY COMPUTE STATISTICS;
+
+Index analyzed.
+
+SQL> ANALYZE INDEX CUSTOMER_PKEY COMPUTE STATISTICS;
+
+Index analyzed.
+
+SQL> ANALYZE INDEX ORDERS_PKEY COMPUTE STATISTICS;
+
+Index analyzed.
+
+SQL> ANALYZE INDEX LINEITEM_PKEY COMPUTE STATISTICS;
+
+Index analyzed.
+
+SQL> 
+SQL> /* (3) Next, the script retrieves and lists the following information from a data dictionary.
+SQL>       (i) The current timestamp obtained from an application of a function systimestamp.                */
+SQL> 
+SQL> SELECT systimestamp 
+  2  FROM DUAL;
+
+SYSTIMESTAMP                          
+--------------------------------------
+04-JUL-21 09.49.12.639251000 AM -04:00
+
+1 row selected. 
+
+SQL> 
+SQL> /* (ii) The names of relational tables, that belong to tpchr sample database together with the total 
+SQL>        number of rows, total number of data blocks, total number of extents and the total number of 
+SQL>        bytes occupied by each table. Display your results in the following format.
+SQL>        table-name total-rows total-blocks total-extents total-bytes                                     */
+SQL> 
+SQL> column SEGMENT_NAME format A30
+SQL> 
+SQL> SELECT USER_SEGMENTS.SEGMENT_NAME, USER_TABLES.NUM_ROWS, USER_SEGMENTS.BLOCKS, USER_SEGMENTS.EXTENTS, USER_SEGMENTS.BYTES
+  2  FROM USER_SEGMENTS JOIN USER_TABLES
+  3                     ON USER_SEGMENTS.SEGMENT_NAME = USER_TABLES.TABLE_NAME
+  4  WHERE USER_TABLES.TABLE_NAME IN ('NATION','REGION', 'PART','SUPPLIER','PARTSUPP','CUSTOMER','ORDERS','LINEITEM');
+
+SEGMENT_NAME                     NUM_ROWS     BLOCKS    EXTENTS      BYTES
+------------------------------ ---------- ---------- ---------- ----------
+CUSTOMER                            45000       1056         33    8650752
+LINEITEM                          1800093      32576       1018  266862592
+NATION                                 25         32          1     262144
+ORDERS                             450000       8416        263   68943872
+PART                                60001       1088         34    8912896
+PARTSUPP                           240000       5024        157   41156608
+REGION                                  5         32          1     262144
+SUPPLIER                             3000         96          3     786432
+
+8 rows selected. 
+
+SQL> 
+SQL> /* (iii) The names of indexes on primary keys automatically created by the system when processing 
+SQL>         CREATE INDEX statements together with total number of data blocks, total number of extents and 
+SQL>         the total number of bytes occupied by each index. Display your results in the following format.  
+SQL>          index-name total-blocks total-extents total-bytes                                               */
+SQL> 
+SQL> SELECT USER_SEGMENTS.SEGMENT_NAME, USER_SEGMENTS.BLOCKS, USER_SEGMENTS.EXTENTS, USER_SEGMENTS.BYTES
+  2  FROM USER_SEGMENTS 
+  3  WHERE USER_SEGMENTS.SEGMENT_NAME IN ('REGION_PKEY','NATION_PKEY','PART_PEKEY','SUPPLIER_PKEY','PARTSUPP_PKEY','CUSTOMER_PKEY','ORDERS_PKEY','LINEITEM_PKEY');
+
+SEGMENT_NAME                       BLOCKS    EXTENTS      BYTES
+------------------------------ ---------- ---------- ----------
+CUSTOMER_PKEY                         128          4    1048576
+LINEITEM_PKEY                        4256        133   34865152
+NATION_PKEY                            32          1     262144
+ORDERS_PKEY                           928         29    7602176
+PARTSUPP_PKEY                         896         28    7340032
+PART_PEKEY                            160          5    1310720
+REGION_PKEY                            32          1     262144
+SUPPLIER_PKEY                          32          1     262144
+
+8 rows selected. 
+
+SQL> 
+SQL> spool off

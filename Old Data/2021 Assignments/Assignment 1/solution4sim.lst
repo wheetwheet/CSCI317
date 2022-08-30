@@ -1,0 +1,54 @@
+SQL> 
+SQL> SET ECHO ON
+SQL> SET FEEDBACK ON
+SQL> SET LINESIZE 300
+SQL> SET PAGESIZE 200
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT *
+  3  FROM LINEITEM JOIN ORDERS
+  4                ON O_ORDERKEY = L_ORDERKEY
+  5  WHERE O_ORDERDATE < '01-JAN-1996' AND
+  6        L_PARTKEY NOT IN (SELECT P_PARTKEY
+  7                          FROM PART
+  8                          WHERE P_BRAND IN ( 'Quick bolts' ) );
+
+Explained.
+
+SQL> 
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 977579051
+ 
+-----------------------------------------------------------------------------------------
+| Id  | Operation            | Name     | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+-----------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |          |  1078K|   257M|       | 28491   (1)| 00:00:02 |
+|*  1 |  HASH JOIN RIGHT ANTI|          |  1078K|   257M|       | 28491   (1)| 00:00:02 |
+|*  2 |   TABLE ACCESS FULL  | PART     |     1 |    16 |       |   401   (1)| 00:00:01 |
+|*  3 |   HASH JOIN          |          |  1078K|   240M|    31M| 28087   (1)| 00:00:02 |
+|*  4 |    TABLE ACCESS FULL | ORDERS   |   273K|    28M|       |  2697   (1)| 00:00:01 |
+|   5 |    TABLE ACCESS FULL | LINEITEM |  1800K|   214M|       | 12158   (1)| 00:00:01 |
+-----------------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - access("LINEITEM"."L_PARTKEY"="P_PARTKEY")
+   2 - filter("P_BRAND"='Quick bolts')
+   3 - access("O_ORDERKEY"="L_ORDERKEY")
+   4 - filter("ORDERS"."O_ORDERDATE"<TO_DATE(' 1996-01-01 00:00:00', 
+              'syyyy-mm-dd hh24:mi:ss'))
+ 
+Note
+-----
+   - this is an adaptive plan
+
+25 rows selected. 
+
+SQL> 
+SQL> spool off
