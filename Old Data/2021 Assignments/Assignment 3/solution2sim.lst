@@ -1,0 +1,219 @@
+SQL> set echo on
+SQL> set feedback on
+SQL> set linesize 300
+SQL> set pagesize 500
+SQL> 
+SQL> /* Implement SQL script solution5.sql that performs the following actions.
+SQL> 
+SQL>/* (1) First, the script creates the indexes to speed up query processing of SELECT statement (1). */
+SQL> 
+SQL> CREATE INDEX IDX1 ON LINEITEM(L_TAX,L_ORDERKEY,L_EXTENDEDPRICE);
+
+Index created.
+
+SQL> CREATE INDEX IDX2 ON ORDERS(O_ORDERSTATUS,O_ORDERKEY,O_CUSTKEY);
+
+Index created.
+
+SQL> 
+SQL> /* (2) Next, the script finds and lists a query processing plan for SELECT statement (1).          */
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT O_CUSTKEY, SUM(L_EXTENDEDPRICE)
+  3  FROM LINEITEM JOIN ORDERS
+  4                ON L_ORDERKEY = O_ORDERKEY
+  5  WHERE O_ORDERSTATUS = 'A' AND
+  6        L_TAX = 0.1
+  7  GROUP BY O_CUSTKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2429569606
+ 
+----------------------------------------------------------------------------------
+| Id  | Operation             | Name     | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |          |  2783 | 86273 |   542   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY        |          |  2783 | 86273 |   542   (1)| 00:00:01 |
+|*  2 |   HASH JOIN           |          |  2911 | 90241 |   541   (1)| 00:00:01 |
+|   3 |    JOIN FILTER CREATE | :BF0000  |  2911 | 37843 |    12   (0)| 00:00:01 |
+|*  4 |     INDEX RANGE SCAN  | IDX2     |  2911 | 37843 |    12   (0)| 00:00:01 |
+|   5 |    VIEW               | VW_GBC_5 |   132K|  2325K|   529   (1)| 00:00:01 |
+|   6 |     HASH GROUP BY     |          |   132K|  1550K|   529   (1)| 00:00:01 |
+|   7 |      JOIN FILTER USE  | :BF0000  |   150K|  1757K|   529   (1)| 00:00:01 |
+|*  8 |       INDEX RANGE SCAN| IDX1     |   150K|  1757K|   529   (1)| 00:00:01 |
+----------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   2 - access("ITEM_1"="O_ORDERKEY")
+   4 - access("ORDERS"."O_ORDERSTATUS"='A')
+   8 - access("LINEITEM"."L_TAX"=0.1)
+
+22 rows selected. 
+
+SQL> 
+SQL> /* (3) Next, the script drops the indexes created in a step (1).                                   */
+SQL> 
+SQL> DROP INDEX IDX1;
+
+Index dropped.
+
+SQL> DROP INDEX IDX2;
+
+Index dropped.
+
+SQL> 
+SQL> /* (4) Next, the script creates the indexes to speed up query processing of SELECT statement (2).  */
+SQL> 
+SQL> CREATE INDEX IDX1 ON CUSTOMER(C_ACCTBAL,C_NAME,C_PHONE,C_CUSTKEY);
+
+Index created.
+
+SQL> CREATE INDEX IDX2 ON  ORDERS(O_CLERK,O_TOTALPRICE,O_CUSTKEY);
+
+Index created.
+
+SQL> 
+SQL> /* (5) Next, the script finds and lists a query processing plan for SELECT statement (2).          */
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT C_NAME, C_PHONE
+  3  FROM CUSTOMER
+  4  WHERE C_ACCTBAL > 100 AND
+  5        C_CUSTKEY NOT IN ( SELECT O_CUSTKEY
+  6                           FROM ORDERS
+  7                           WHERE O_TOTALPRICE > 2000 AND
+  8                                 O_CLERK = 'James' );
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 332418637
+ 
+------------------------------------------------------------------------------
+| Id  | Operation             | Name | Rows  | Bytes | Cost (%CPU)| Time     |
+------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |      | 40054 |  2698K|   138   (0)| 00:00:01 |
+|*  1 |  HASH JOIN RIGHT ANTI |      | 40054 |  2698K|   138   (0)| 00:00:01 |
+|*  2 |   INDEX RANGE SCAN    | IDX2 |   449 | 12123 |     5   (0)| 00:00:01 |
+|*  3 |   INDEX FAST FULL SCAN| IDX1 | 40500 |  1661K|   133   (0)| 00:00:01 |
+------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - access("C_CUSTKEY"="O_CUSTKEY")
+   2 - access("O_CLERK"='James' AND "O_TOTALPRICE">2000 AND 
+              "O_CUSTKEY">=0)
+       filter("O_CUSTKEY">=0)
+   3 - filter("C_ACCTBAL">100)
+
+19 rows selected. 
+
+SQL> 
+SQL> 
+SQL> /* (6) Next, the script drops the indexes created in a step (4).                                  */
+SQL> 
+SQL> DROP INDEX IDX1;
+
+Index dropped.
+
+SQL> DROP INDEX IDX2;
+
+Index dropped.
+
+SQL> 
+SQL> /* (7) Next, the script creates the indexes to speed up query processing of SELECT statement (3). */
+SQL> 
+SQL> CREATE INDEX IDX1 ON PART(P_NAME,P_PARTKEY);
+
+Index created.
+
+SQL> CREATE INDEX IDX2 ON ORDERS(O_ORDERKEY,O_ORDERDATE,O_TOTALPRICE);
+
+Index created.
+
+SQL> CREATE INDEX IDX3 ON LINEITEM(L_PARTKEY,L_ORDERKEY);
+
+Index created.
+
+SQL> 
+SQL> /* (8) Next, the script finds and lists a query processing plan for SELECT statement (3).         */
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT O_ORDERKEY, O_ORDERDATE, O_TOTALPRICE
+  3  FROM ORDERS
+  4  WHERE NOT EXISTS ( SELECT 'whatever'
+  5                     FROM LINEITEM
+  6                     WHERE L_ORDERKEY = O_ORDERKEY AND
+  7                           L_PARTKEY IN 
+  8                               ( SELECT P_PARTKEY
+  9                                 FROM PART
+ 10                                 WHERE P_NAME = 'bolt' ) );
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 3408603262
+ 
+---------------------------------------------------------------------------------
+| Id  | Operation             | Name    | Rows  | Bytes | Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT      |         |   449K|    14M|   726   (1)| 00:00:01 |
+|*  1 |  HASH JOIN RIGHT ANTI |         |   449K|    14M|   726   (1)| 00:00:01 |
+|   2 |   VIEW                | VW_SQ_1 |    30 |   390 |     5   (0)| 00:00:01 |
+|   3 |    NESTED LOOPS       |         |    30 |  1410 |     5   (0)| 00:00:01 |
+|*  4 |     INDEX RANGE SCAN  | IDX1    |     1 |    38 |     3   (0)| 00:00:01 |
+|*  5 |     INDEX RANGE SCAN  | IDX3    |    30 |   270 |     2   (0)| 00:00:01 |
+|   6 |   INDEX FAST FULL SCAN| IDX2    |   450K|  8789K|   720   (1)| 00:00:01 |
+---------------------------------------------------------------------------------
+ 
+Predicate Information (identified by operation id):
+---------------------------------------------------
+ 
+   1 - access("ITEM_1"="O_ORDERKEY")
+   4 - access("P_NAME"='bolt')
+   5 - access("L_PARTKEY"="P_PARTKEY")
+       filter("L_PARTKEY">=0)
+ 
+Note
+-----
+   - this is an adaptive plan
+
+25 rows selected. 
+
+SQL> 
+SQL> /* (9) Next, the script drops the indexes created in a step (7).                                 */
+SQL> 
+SQL> DROP INDEX IDX1;
+
+Index dropped.
+
+SQL> DROP INDEX IDX2;
+
+Index dropped.
+
+SQL> DROP INDEX IDX3;
+
+Index dropped.
+
+SQL> 
+SQL> spool off

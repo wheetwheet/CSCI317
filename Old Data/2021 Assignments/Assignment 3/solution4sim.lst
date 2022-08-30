@@ -1,0 +1,436 @@
+SQL> 
+SQL> set echo on
+SQL> set feedback on
+SQL> set linesize 300
+SQL> set pagesize 500
+SQL> 
+SQL> connect system/oracle
+Connected.
+SQL> 
+SQL> GRANT CREATE MATERIALIZED VIEW TO tpchr;
+
+Grant succeeded.
+
+SQL> GRANT QUERY REWRITE TO tpchr;
+
+Grant succeeded.
+
+SQL> GRANT CREATE ANY TABLE TO tpchr;
+
+Grant succeeded.
+
+SQL> 
+SQL> connect tpchr/oracle
+Connected.
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_PARTKEY, L_SUPPKEY, SUM(L_QUANTITY)
+  3  FROM LINEITEM
+  4  GROUP BY L_PARTKEY, L_SUPPKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1773397105
+ 
+---------------------------------------------------------------------------------------
+| Id  | Operation          | Name     | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |  1800K|    20M|       | 20353   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY     |          |  1800K|    20M|    41M| 20353   (1)| 00:00:01 |
+|   2 |   TABLE ACCESS FULL| LINEITEM |  1800K|    20M|       | 12147   (1)| 00:00:01 |
+---------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_SUPPKEY, L_ORDERKEY, SUM(L_DISCOUNT)
+  3  FROM LINEITEM
+  4  GROUP BY L_SUPPKEY, L_ORDERKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1773397105
+ 
+---------------------------------------------------------------------------------------
+| Id  | Operation          | Name     | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |  1800K|    22M|       | 20695   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY     |          |  1800K|    22M|    41M| 20695   (1)| 00:00:01 |
+|   2 |   TABLE ACCESS FULL| LINEITEM |  1800K|    22M|       | 12149   (1)| 00:00:01 |
+---------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_SUPPKEY, L_ORDERKEY, SUM(L_QUANTITY)
+  3  FROM LINEITEM
+  4  GROUP BY L_SUPPKEY, L_ORDERKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1773397105
+ 
+---------------------------------------------------------------------------------------
+| Id  | Operation          | Name     | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |  1800K|    22M|       | 20693   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY     |          |  1800K|    22M|    41M| 20693   (1)| 00:00:01 |
+|   2 |   TABLE ACCESS FULL| LINEITEM |  1800K|    22M|       | 12147   (1)| 00:00:01 |
+---------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_PARTKEY, L_SUPPKEY, COUNT(L_DISCOUNT)
+  3  FROM LINEITEM
+  4  GROUP BY L_PARTKEY, L_SUPPKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1773397105
+ 
+---------------------------------------------------------------------------------------
+| Id  | Operation          | Name     | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |  1800K|    15M|       | 18990   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY     |          |  1800K|    15M|    34M| 18990   (1)| 00:00:01 |
+|   2 |   TABLE ACCESS FULL| LINEITEM |  1800K|    15M|       | 12145   (1)| 00:00:01 |
+---------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_PARTKEY, L_SUPPKEY, SUM(L_DISCOUNT)
+  3  FROM LINEITEM
+  4  GROUP BY L_PARTKEY, L_SUPPKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1773397105
+ 
+---------------------------------------------------------------------------------------
+| Id  | Operation          | Name     | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+---------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT   |          |  1800K|    20M|       | 20355   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY     |          |  1800K|    20M|    41M| 20355   (1)| 00:00:01 |
+|   2 |   TABLE ACCESS FULL| LINEITEM |  1800K|    20M|       | 12149   (1)| 00:00:01 |
+---------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_SUPPKEY, COUNT(DISTINCT L_DISCOUNT)
+  3  FROM LINEITEM
+  4  GROUP BY L_SUPPKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1639571750
+ 
+------------------------------------------------------------------------------------------
+| Id  | Operation            | Name      | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |           |  3000 | 51000 |       | 14399   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY       |           |  3000 | 51000 |       | 14399   (1)| 00:00:01 |
+|   2 |   VIEW               | VM_NWVW_1 | 23335 |   387K|       | 14399   (1)| 00:00:01 |
+|   3 |    HASH GROUP BY     |           | 23335 |   159K|    27M| 14399   (1)| 00:00:01 |
+|   4 |     TABLE ACCESS FULL| LINEITEM  |  1800K|    12M|       | 12149   (1)| 00:00:01 |
+------------------------------------------------------------------------------------------
+
+11 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_PARTKEY, L_SUPPKEY, COUNT(DISTINCT L_DISCOUNT)
+  3  FROM LINEITEM
+  4  GROUP BY L_PARTKEY, L_SUPPKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1639571750
+ 
+------------------------------------------------------------------------------------------
+| Id  | Operation            | Name      | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT     |           |  1800K|    37M|       | 20355   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY       |           |  1800K|    37M|       | 20355   (1)| 00:00:01 |
+|   2 |   VIEW               | VM_NWVW_1 |  1800K|    37M|       | 20355   (1)| 00:00:01 |
+|   3 |    HASH GROUP BY     |           |  1800K|    20M|    41M| 20355   (1)| 00:00:01 |
+|   4 |     TABLE ACCESS FULL| LINEITEM  |  1800K|    20M|       | 12149   (1)| 00:00:01 |
+------------------------------------------------------------------------------------------
+
+11 rows selected. 
+
+SQL> 
+SQL> /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+SQL> CREATE MATERIALIZED VIEW MV_LINEITEM_1
+  2  ENABLE QUERY REWRITE
+  3  AS
+  4  SELECT L_SUPPKEY, L_PARTKEY, L_ORDERKEY, SUM(L_QUANTITY), SUM(L_DISCOUNT), COUNT(L_DISCOUNT)
+  5  FROM LINEITEM
+  6  GROUP BY L_PARTKEY, L_SUPPKEY, L_ORDERKEY;
+
+Materialized view created.
+
+SQL> 
+SQL> CREATE MATERIALIZED VIEW MV_LINEITEM_2
+  2  ENABLE QUERY REWRITE
+  3  AS
+  4  SELECT L_SUPPKEY, COUNT(DISTINCT L_DISCOUNT)
+  5  FROM LINEITEM
+  6  GROUP BY L_SUPPKEY;
+
+Materialized view created.
+
+SQL> 
+SQL> CREATE MATERIALIZED VIEW MV_LINEITEM_3
+  2  ENABLE QUERY REWRITE
+  3  AS
+  4  SELECT L_SUPPKEY, L_PARTKEY, COUNT(DISTINCT L_DISCOUNT)
+  5  FROM LINEITEM
+  6  GROUP BY L_SUPPKEY, L_PARTKEY;
+
+Materialized view created.
+
+SQL> /* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ */
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_PARTKEY, L_SUPPKEY, SUM(L_QUANTITY)
+  3  FROM LINEITEM
+  4  GROUP BY L_PARTKEY, L_SUPPKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1208584033
+ 
+-------------------------------------------------------------------------------------------------------
+| Id  | Operation                     | Name          | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT              |               |  1800K|    20M|       | 10891   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY                |               |  1800K|    20M|    41M| 10891   (1)| 00:00:01 |
+|   2 |   MAT_VIEW REWRITE ACCESS FULL| MV_LINEITEM_1 |  1800K|    20M|       |  2686   (1)| 00:00:01 |
+-------------------------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_SUPPKEY, L_ORDERKEY, SUM(L_DISCOUNT)
+  3  FROM LINEITEM
+  4  GROUP BY L_SUPPKEY, L_ORDERKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1208584033
+ 
+-------------------------------------------------------------------------------------------------------
+| Id  | Operation                     | Name          | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT              |               |  1800K|    22M|       | 11232   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY                |               |  1800K|    22M|    41M| 11232   (1)| 00:00:01 |
+|   2 |   MAT_VIEW REWRITE ACCESS FULL| MV_LINEITEM_1 |  1800K|    22M|       |  2686   (1)| 00:00:01 |
+-------------------------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_SUPPKEY, L_ORDERKEY, SUM(L_QUANTITY)
+  3  FROM LINEITEM
+  4  GROUP BY L_SUPPKEY, L_ORDERKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1208584033
+ 
+-------------------------------------------------------------------------------------------------------
+| Id  | Operation                     | Name          | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT              |               |  1800K|    22M|       | 11231   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY                |               |  1800K|    22M|    41M| 11231   (1)| 00:00:01 |
+|   2 |   MAT_VIEW REWRITE ACCESS FULL| MV_LINEITEM_1 |  1800K|    22M|       |  2686   (1)| 00:00:01 |
+-------------------------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_PARTKEY, L_SUPPKEY, COUNT(L_DISCOUNT)
+  3  FROM LINEITEM
+  4  GROUP BY L_PARTKEY, L_SUPPKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1208584033
+ 
+-------------------------------------------------------------------------------------------------------
+| Id  | Operation                     | Name          | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT              |               |  1800K|    20M|       | 10893   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY                |               |  1800K|    20M|    41M| 10893   (1)| 00:00:01 |
+|   2 |   MAT_VIEW REWRITE ACCESS FULL| MV_LINEITEM_1 |  1800K|    20M|       |  2687   (1)| 00:00:01 |
+-------------------------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_PARTKEY, L_SUPPKEY, SUM(L_DISCOUNT)
+  3  FROM LINEITEM
+  4  GROUP BY L_PARTKEY, L_SUPPKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1208584033
+ 
+-------------------------------------------------------------------------------------------------------
+| Id  | Operation                     | Name          | Rows  | Bytes |TempSpc| Cost (%CPU)| Time     |
+-------------------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT              |               |  1800K|    20M|       | 10892   (1)| 00:00:01 |
+|   1 |  HASH GROUP BY                |               |  1800K|    20M|    41M| 10892   (1)| 00:00:01 |
+|   2 |   MAT_VIEW REWRITE ACCESS FULL| MV_LINEITEM_1 |  1800K|    20M|       |  2686   (1)| 00:00:01 |
+-------------------------------------------------------------------------------------------------------
+
+9 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_SUPPKEY, COUNT(DISTINCT L_DISCOUNT)
+  3  FROM LINEITEM
+  4  GROUP BY L_SUPPKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 1913267376
+ 
+----------------------------------------------------------------------------------------------
+| Id  | Operation                    | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT             |               |  3000 | 21000 |     5   (0)| 00:00:01 |
+|   1 |  MAT_VIEW REWRITE ACCESS FULL| MV_LINEITEM_2 |  3000 | 21000 |     5   (0)| 00:00:01 |
+----------------------------------------------------------------------------------------------
+
+8 rows selected. 
+
+SQL> 
+SQL> EXPLAIN PLAN FOR
+  2  SELECT L_PARTKEY, L_SUPPKEY, COUNT(DISTINCT L_DISCOUNT)
+  3  FROM LINEITEM
+  4  GROUP BY L_PARTKEY, L_SUPPKEY;
+
+Explained.
+
+SQL> 
+SQL> @showplan
+SQL> SELECT * FROM TABLE(DBMS_XPLAN.DISPLAY);
+
+PLAN_TABLE_OUTPUT
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Plan hash value: 2370006120
+ 
+----------------------------------------------------------------------------------------------
+| Id  | Operation                    | Name          | Rows  | Bytes | Cost (%CPU)| Time     |
+----------------------------------------------------------------------------------------------
+|   0 | SELECT STATEMENT             |               |   239K|  2811K|   218   (1)| 00:00:01 |
+|   1 |  MAT_VIEW REWRITE ACCESS FULL| MV_LINEITEM_3 |   239K|  2811K|   218   (1)| 00:00:01 |
+----------------------------------------------------------------------------------------------
+
+8 rows selected. 
+
+SQL> DROP MATERIALIZED VIEW MV_LINEITEM_1;
+
+Materialized view dropped.
+
+SQL> DROP MATERIALIZED VIEW MV_LINEITEM_2;
+
+Materialized view dropped.
+
+SQL> DROP MATERIALIZED VIEW MV_LINEITEM_3;
+
+Materialized view dropped.
+
+SQL> 
+SQL> spool off
