@@ -1,0 +1,37 @@
+spool solution3
+
+set echo on
+set feedback on
+set linesize 100
+set pagesize 50
+
+connect sys/oracle as sysdba
+ALTER SYSTEM SET db_cache_size=20M SCOPE=SPFILE;
+ALTER SYSTEM SET db_keep_cache_size=350M SCOPE=SPFILE;
+ALTER SYSTEM SET db_recycle_cache_size=4M SCOPE=SPFILE;
+
+shutdown immediate
+
+startup
+
+connect system/oracle
+
+show parameters db_cache_size
+show parameters db_keep_cache_size
+show parameters db_recycle_cache_size
+
+ALTER TABLE TPCHR.ORDERS STORAGE (BUFFER_POOL KEEP);
+ALTER TABLE TPCHR.PARTSUPP STORAGE (BUFFER_POOL KEEP);
+ALTER TABLE TPCHR.CUSTOMER STORAGE (BUFFER_POOL KEEP);
+ALTER TABLE TPCHR.PART STORAGE (BUFFER_POOL KEEP);
+ALTER TABLE TPCHR.SUPPLIER STORAGE (BUFFER_POOL KEEP);
+
+ALTER TABLE TPCHR.NATION STORAGE (BUFFER_POOL DEFAULT);
+ALTER TABLE TPCHR.REGION STORAGE (BUFFER_POOL DEFAULT);
+
+ALTER TABLE TPCHR.LINEITEM STORAGE (BUFFER_POOL RECYCLE);
+
+spool off
+
+
+
